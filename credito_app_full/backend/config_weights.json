@@ -1,0 +1,26 @@
+{
+  "weights": {
+    "liquidez_corrente": 30,
+    "endividamento_total": 25,
+    "margem_ebitda": 25,
+    "roa_approx": 20
+  },
+  "thresholds": {
+    "liquidez_corrente": [
+      1.0,
+      1.5
+    ],
+    "endividamento_total": [
+      0.5,
+      0.7
+    ],
+    "margem_ebitda": [
+      0.08,
+      0.15
+    ],
+    "roa_approx": [
+      0.02,
+      0.06
+    ]
+  }
+}
