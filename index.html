@@ -2,147 +2,116 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Portal de Análise de Empresas</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal de Análise Financeira - Versão 2</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; background:#f5f5f5; }
     header { background:#111827; color:#fff; padding:20px; text-align:center; }
-    main { max-width: 960px; margin: 20px auto; background:#fff; padding:24px; border-radius:12px; }
+    main { max-width: 1000px; margin: 20px auto; background:#fff; padding:24px; border-radius:12px; }
     h1, h2 { margin-top:0; }
-    .section { margin-bottom:24px; }
+    .section { margin-bottom:32px; }
     .card { border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:16px; }
-    .btn { display:inline-block; padding:10px 18px; border-radius:999px; border:none; cursor:pointer; text-decoration:none; }
+    .btn { display:inline-block; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; text-decoration:none; }
     .btn-primary { background:#2563eb; color:#fff; }
     .btn-secondary { background:#e5e7eb; color:#111827; }
     footer { text-align:center; padding:16px; font-size:12px; color:#6b7280; }
     input, select { padding:8px; border-radius:6px; border:1px solid #d1d5db; width:100%; box-sizing:border-box; }
     label { font-size:14px; color:#374151; margin-bottom:4px; display:block; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+    th { background:#f3f4f6; }
   </style>
 </head>
 <body>
   <header>
     <h1>Portal de Análise Financeira</h1>
-    <p>Simulador simples para análise de empresas para Seguro Garantia</p>
+    <p>Versão 2.0 — agora com importação de PDF e comparativo entre anos</p>
   </header>
 
   <main>
     <section class="section">
-      <h2>1. Dados básicos da empresa</h2>
+      <h2>1. Importar PDF de Balanço</h2>
       <div class="card">
-        <label>CNPJ / Nome</label>
-        <input id="empresa" placeholder="Ex: PRIDE ENGENHARIA S.A." />
-
-        <label style="margin-top:12px;">Setor</label>
-        <select id="setor">
-          <option value="construcao">Construção Civil / Real Estate</option>
-          <option value="servicos">Serviços</option>
-          <option value="industria">Indústria</option>
-          <option value="outros">Outros</option>
-        </select>
+        <input type="file" id="pdfFile" accept="application/pdf" />
+        <button class="btn btn-primary" onclick="lerPDF()">Ler PDF</button>
+        <p id="pdfStatus">Nenhum arquivo importado ainda.</p>
       </div>
     </section>
 
     <section class="section">
-      <h2>2. Indicadores financeiros (último ano)</h2>
+      <h2>2. Comparativo de Indicadores (2023–2025)</h2>
       <div class="card">
-        <label>Ativo Circulante (R$)</label>
-        <input id="ativo_circ" type="number" />
-
-        <label style="margin-top:12px;">Passivo Circulante (R$)</label>
-        <input id="passivo_circ" type="number" />
-
-        <label style="margin-top:12px;">Dívida Bruta (R$)</label>
-        <input id="divida_bruta" type="number" />
-
-        <label style="margin-top:12px;">Caixa e Equivalentes (R$)</label>
-        <input id="caixa" type="number" />
-
-        <label style="margin-top:12px;">EBITDA (R$)</label>
-        <input id="ebitda" type="number" />
-      </div>
-      <button class="btn btn-primary" onclick="calcular()">Calcular análise</button>
-    </section>
-
-    <section class="section">
-      <h2>3. Resultado resumido</h2>
-      <div class="card" id="resultado">
-        Preencha os dados e clique em "Calcular análise".
+        <table id="comparativo">
+          <thead>
+            <tr><th>Indicador</th><th>2023</th><th>2024</th><th>2025</th><th>Variação %</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Liquidez Corrente</td><td contenteditable>1.2</td><td contenteditable>1.5</td><td contenteditable>1.7</td><td id="var1"></td></tr>
+            <tr><td>Dívida Líquida / EBITDA</td><td contenteditable>3.2</td><td contenteditable>2.8</td><td contenteditable>2.2</td><td id="var2"></td></tr>
+            <tr><td>Margem EBITDA (%)</td><td contenteditable>8</td><td contenteditable>10</td><td contenteditable>12</td><td id="var3"></td></tr>
+          </tbody>
+        </table>
+        <button class="btn btn-primary" onclick="calcularVariacoes()">Atualizar Variações</button>
+        <canvas id="grafico" height="100"></canvas>
       </div>
     </section>
 
     <section class="section">
-      <h2>4. Observações (baseadas no seu README)</h2>
-      <div class="card">
-        <p>
-          Aqui você pode trazer, em texto, o resumo do que já está no README:
-          critérios de análise, como interpretar os índices, política de seguro garantia,
-          limites, etc.
-        </p>
-      </div>
+      <button class="btn btn-secondary" onclick="gerarPDF()">Baixar Relatório em PDF</button>
     </section>
   </main>
 
   <footer>
-    Portal de testes • Ajuste a lógica conforme sua necessidade
+    © 2025 Portal Financeiro - Desenvolvido para testes e simulações
   </footer>
 
   <script>
-    function formatBR(value) {
-      if (isNaN(value)) return "-";
-      return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    async function lerPDF() {
+      const file = document.getElementById('pdfFile').files[0];
+      if (!file) return alert('Selecione um arquivo PDF.');
+      const reader = new FileReader();
+      reader.onload = async function() {
+        const typedarray = new Uint8Array(this.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let texto = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const strings = content.items.map(item => item.str);
+          texto += strings.join(' ');
+        }
+        document.getElementById('pdfStatus').innerText = 'PDF importado! Buscando indicadores...';
+        const match = texto.match(/EBITDA\s*[:=]\s*([0-9.,]+)/i);
+        if (match) alert('EBITDA detectado: ' + match[1]);
+      };
+      reader.readAsArrayBuffer(file);
     }
 
-    function calcular() {
-      const empresa = document.getElementById("empresa").value || "Empresa não informada";
-      const setor = document.getElementById("setor").value;
+    function calcularVariacoes() {
+      const linhas = document.querySelectorAll('#comparativo tbody tr');
+      linhas.forEach((linha, i) => {
+        const valores = [...linha.querySelectorAll('td')].slice(1,4).map(td => parseFloat(td.innerText.replace(',', '.')));
+        const variacao = ((valores[2] - valores[0]) / valores[0]) * 100;
+        linha.querySelector(`#var${i+1}`).innerText = variacao.toFixed(1) + '%';
+      });
+      desenharGrafico();
+    }
 
-      const ac = Number(document.getElementById("ativo_circ").value) || 0;
-      const pc = Number(document.getElementById("passivo_circ").value) || 0;
-      const divida = Number(document.getElementById("divida_bruta").value) || 0;
-      const caixa = Number(document.getElementById("caixa").value) || 0;
-      const ebitda = Number(document.getElementById("ebitda").value) || 0;
+    function desenharGrafico() {
+      const ctx = document.getElementById('grafico').getContext('2d');
+      const labels = ['2023','2024','2025'];
+      const liquidez = [1.2,1.5,1.7];
+      new Chart(ctx, { type: 'bar', data: { labels, datasets:[{label:'Liquidez Corrente', data:liquidez}] }});
+    }
 
-      const liquidez_corrente = pc > 0 ? ac / pc : null;
-      const divida_liquida = divida - caixa;
-      const divida_liquida_ebitda = ebitda > 0 ? divida_liquida / ebitda : null;
-
-      let parecer = [];
-
-      if (liquidez_corrente !== null) {
-        if (liquidez_corrente >= 1.2) {
-          parecer.push("Liquidez corrente saudável (≥ 1,2).");
-        } else if (liquidez_corrente >= 1.0) {
-          parecer.push("Liquidez corrente razoável, atenção ao curto prazo.");
-        } else {
-          parecer.push("Liquidez corrente abaixo de 1,0: risco de pressão de caixa.");
-        }
-      }
-
-      if (!isNaN(divida_liquida_ebitda)) {
-        if (divida_liquida_ebitda <= 2) {
-          parecer.push("Alavancagem controlada (Dívida Líquida/EBITDA ≤ 2).");
-        } else if (divida_liquida_ebitda <= 3.5) {
-          parecer.push("Alavancagem moderada, requer monitoramento.");
-        } else {
-          parecer.push("Alavancagem elevada: atenção para limite de crédito e capacidade de emissão.");
-        }
-      }
-
-      if (setor === "construcao") {
-        parecer.push("Setor de construção: importante cruzar com carteira de obras, concentração em poucos clientes e histórico de entrega.");
-      }
-
-      const html = `
-        <p><strong>Empresa:</strong> ${empresa}</p>
-        <p><strong>Liquidez Corrente:</strong> ${liquidez_corrente ? liquidez_corrente.toFixed(2) : "-"} </p>
-        <p><strong>Dívida Líquida:</strong> ${formatBR(divida_liquida)}</p>
-        <p><strong>Dívida Líquida / EBITDA:</strong> ${!isNaN(divida_liquida_ebitda) ? divida_liquida_ebitda.toFixed(2) : "-"}</p>
-        <hr />
-        <p><strong>Parecer automático (esboço):</strong></p>
-        <ul>${parecer.map(p => `<li>${p}</li>`).join("")}</ul>
-      `;
-
-      document.getElementById("resultado").innerHTML = html;
+    function gerarPDF() {
+      const relatorio = window.open('', '_blank');
+      relatorio.document.write('<h2>Relatório de Análise Financeira</h2>');
+      relatorio.document.write(document.querySelector('main').innerHTML);
+      relatorio.document.close();
+      relatorio.print();
     }
   </script>
 </body>
