@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portal Financeiro v6 – Seguro Garantia</title>
+  <title>Portal Financeiro v7 – Seguro Garantia</title>
 
   <!-- PDF.js e Chart.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
   <script>
-    // Configura worker do pdf.js
     if (window['pdfjsLib']) {
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
@@ -163,7 +162,6 @@
     }
     .checklist-table td:first-child { text-align: left; }
     .check-ok { color: var(--success); font-weight: bold; }
-    .check-alert { color: #ca8a04; font-weight: bold; }
     .check-bad { color: var(--danger); font-weight: bold; }
     footer {
       text-align: center;
@@ -176,7 +174,7 @@
 <body>
   <header>
     <h1>Portal de Análise Técnica – Seguro Garantia</h1>
-    <p>v6 • Análise por setor, modalidade, grupo econômico e elegibilidade Caixa / SGTO / SGPE</p>
+    <p>v7 • Tomador x Grupo, histórico 2022–2025, Caixa/SGTO/SGPE/Infra & Permuta</p>
   </header>
 
   <main>
@@ -210,20 +208,21 @@
             <option value="2025">2025</option>
             <option value="2024">2024</option>
             <option value="2023">2023</option>
+            <option value="2022">2022</option>
           </select>
         </div>
       </div>
     </section>
 
-    <!-- 2. Upload de PDFs -->
+    <!-- 2. Upload de PDFs (Tomador + Grupo) -->
     <section class="section">
-      <h2>2. Importar Demonstrações (PDF)</h2>
+      <h2>2. Importar Demonstrações (Tomador + Grupo)</h2>
       <div class="card">
         <label>Envie os balanços / DRE do grupo (até 5 PDFs)</label>
         <input type="file" id="pdfFiles" accept="application/pdf" multiple />
         <button class="btn btn-primary" onclick="lerMultiplosPDFs()">Importar e Consolidar</button>
         <p class="hint">
-          • O <strong>primeiro arquivo</strong> será considerado como <strong>SPE Tomadora</strong>.<br>
+          • O <strong>primeiro arquivo</strong> será considerado como <strong>Tomador (empresa analisada)</strong>.<br>
           • Os demais arquivos serão usados para compor o <strong>Grupo Econômico (consolidado gerencial)</strong>.<br>
           • O consolidado é por somatória simples, com detecção indicativa de intercompany.
         </p>
@@ -231,21 +230,21 @@
       </div>
     </section>
 
-    <!-- 3. SPE vs Grupo -->
+    <!-- 3. Tomador vs Grupo -->
     <section class="section">
-      <h2>3. SPE vs Grupo Econômico</h2>
+      <h2>3. Tomador vs Grupo Econômico</h2>
       <div class="card">
         <div class="flex">
           <div class="col">
-            <h3>SPE (Tomadora)</h3>
+            <h3>Tomador (Empresa)</h3>
             <table id="empresaTabela">
               <thead>
                 <tr><th>Indicador</th><th>Valor</th></tr>
               </thead>
               <tbody>
-                <tr><td>Liquidez Corrente</td><td id="liqSPE">-</td></tr>
-                <tr><td>Dívida Líquida / EBITDA</td><td id="divSPE">-</td></tr>
-                <tr><td>Margem EBITDA (%)</td><td id="margSPE">-</td></tr>
+                <tr><td>Liquidez Corrente</td><td id="liqTomador">-</td></tr>
+                <tr><td>Dívida Líquida / EBITDA</td><td id="divTomador">-</td></tr>
+                <tr><td>Margem EBITDA (%)</td><td id="margTomador">-</td></tr>
               </tbody>
             </table>
           </div>
@@ -265,7 +264,7 @@
         </div>
 
         <div style="margin-top: 18px;">
-          <canvas id="grafico" height="120"></canvas>
+          <canvas id="graficoTomadorGrupo" height="120"></canvas>
         </div>
 
         <p id="intercompanyInfo" class="hint" style="margin-top:10px;"></p>
@@ -277,7 +276,7 @@
       <h2>4. Parecer Automático & Capacidade de Emissão</h2>
       <div class="card flex">
         <div class="col" id="parecerAuto">
-          Importe os PDFs para gerar a nota de risco, a classificação e o resumo da análise.
+          Importe os PDFs para gerar a nota de risco, a classificação e o resumo da análise do Tomador.
         </div>
         <div class="col" id="capacidadeBox">
           <h3>Capacidade de Emissão Estimada</h3>
@@ -292,9 +291,45 @@
       </div>
     </section>
 
-    <!-- 5. Painel de Permutas -->
+    <!-- 5. Histórico do Tomador 2022–2025 -->
+    <section class="section">
+      <h2>5. Histórico do Tomador (2022–2025)</h2>
+      <div class="card">
+        <p class="hint">
+          Opcional: importe os balanços do Tomador por ano para acompanhar a evolução de crédito no tempo.
+        </p>
+        <div class="flex">
+          <div class="col">
+            <label>Tomador 2022 (PDF)</label>
+            <input type="file" id="pdfTomador2022" accept="application/pdf" />
+          </div>
+          <div class="col">
+            <label>Tomador 2023 (PDF)</label>
+            <input type="file" id="pdfTomador2023" accept="application/pdf" />
+          </div>
+          <div class="col">
+            <label>Tomador 2024 (PDF)</label>
+            <input type="file" id="pdfTomador2024" accept="application/pdf" />
+          </div>
+          <div class="col">
+            <label>Tomador 2025 (PDF)</label>
+            <input type="file" id="pdfTomador2025" accept="application/pdf" />
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="lerHistoricoTomador()">Importar Histórico</button>
+
+        <div style="margin-top:18px;">
+          <canvas id="graficoHistorico" height="120"></canvas>
+        </div>
+        <div id="resumoHistorico" class="hint" style="margin-top:10px;">
+          Ainda não há histórico carregado. Importe pelo menos um ano para visualizar a evolução.
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Painel de Permutas -->
     <section class="section" id="permutaSection" style="display:none;">
-      <h2>5. Permuta – Estrutura do Pagamento</h2>
+      <h2>6. Permuta – Estrutura do Pagamento</h2>
       <div class="card flex">
         <div class="col">
           <label>Tipo de Permuta</label>
@@ -318,9 +353,9 @@
       </div>
     </section>
 
-    <!-- 6. Checklist Caixa -->
+    <!-- 7. Checklist Caixa -->
     <section class="section">
-      <h2>6. Aderência Caixa Econômica Federal</h2>
+      <h2>7. Aderência Caixa Econômica Federal</h2>
       <div class="card">
         <div class="flex">
           <div class="col">
@@ -354,9 +389,9 @@
       </div>
     </section>
 
-    <!-- 7. Parecer Qualitativo -->
+    <!-- 8. Parecer Qualitativo -->
     <section class="section">
-      <h2>7. Parecer Qualitativo do Analista</h2>
+      <h2>8. Parecer Qualitativo do Analista</h2>
       <div class="card">
         <label>Pontos Fortes</label>
         <textarea id="pontosFortes" placeholder="Ex.: histórico de entrega, baixa inadimplência, grupo econômico sólido..."></textarea>
@@ -369,18 +404,18 @@
       </div>
     </section>
 
-    <!-- 8. Relatório -->
+    <!-- 9. Relatório -->
     <section class="section">
       <button class="btn btn-secondary" onclick="gerarPDF()">Baixar Relatório Profissional (PDF/Impressão)</button>
     </section>
   </main>
 
   <footer>
-    © 2025 • Portal Financeiro v6 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
+    © 2025 • Portal Financeiro v7 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
   </footer>
 
   <script>
-    // Guidelines por modalidade (foco em Seguro Garantia)
+    // Guidelines por modalidade (Seguro Garantia)
     const guidelinesModalidade = {
       sgto:        { liq: 1.1, div: 3.0, marg: 8,  name: 'SGTO (Obras)' },
       sgpe:        { liq: 1.3, div: 2.5, marg: 10, name: 'SGPE (Empreendimentos)' },
@@ -389,10 +424,12 @@
       permutaFinanceira: { liq: 1.0, div: 4.0, marg: 5,  name: 'Permuta Financeira' },
     };
 
-    let ultimoSPE = null;
-    let ultimoGrupo = null;
-    let ultimoScore = null;
+    let ultimoTomador = null;
+    let ultimoGrupo   = null;
+    let ultimoScore   = null;
     let intercompanyCount = 0;
+    let chartTomadorGrupo = null;
+    let chartHistorico    = null;
 
     function getGuidelines() {
       const modalidade = document.getElementById('modalidade').value;
@@ -402,41 +439,42 @@
     async function lerMultiplosPDFs() {
       const files = document.getElementById('pdfFiles').files;
       if (!files || !files.length) {
-        alert('Selecione pelo menos um PDF.');
+        alert('Selecione pelo menos um PDF do Tomador/Grupo.');
         return;
       }
-      document.getElementById('pdfStatus').textContent = 'Lendo arquivos e extraindo indicadores...';
+      document.getElementById('pdfStatus').textContent =
+        'Lendo arquivos e extraindo indicadores (Tomador + Grupo)...';
 
       const resultados = [];
       intercompanyCount = 0;
 
       for (let i = 0; i < files.length && i < 5; i++) {
-        const file = files[i];
-        const parsed = await parsePdf(file);
+        const parsed = await parsePdf(files[i]);
         resultados.push(parsed);
         if (parsed.hasIntercompany) intercompanyCount++;
       }
 
       if (!resultados.length) {
-        document.getElementById('pdfStatus').textContent = 'Não foi possível extrair dados dos PDFs.';
+        document.getElementById('pdfStatus').textContent =
+          'Não foi possível extrair dados dos PDFs.';
         return;
       }
 
-      const spe   = resultados[0];
-      const grupo = consolidarResultados(resultados);
+      const tomador = resultados[0];
+      const grupo   = consolidarResultados(resultados);
 
-      ultimoSPE   = spe;
-      ultimoGrupo = grupo;
+      ultimoTomador = tomador;
+      ultimoGrupo   = grupo;
 
-      preencherTabelas(spe, grupo);
-      desenharGrafico(spe, grupo);
+      preencherTabelasTomadorGrupo(tomador, grupo);
+      desenharGraficoTomadorGrupo(tomador, grupo);
       atualizarIntercompanyInfo(files.length);
 
       const setor = document.getElementById('setor').value;
       const modalidade = document.getElementById('modalidade').value;
-      gerarParecer(spe, grupo, setor, modalidade);
-      atualizarChecklist();   // usa SPE atual
-      atualizarPermutaAlerta(); // recalcula se já tiver dados
+      gerarParecer(tomador, grupo, setor, modalidade);
+      atualizarChecklist();
+      atualizarPermutaAlerta();
 
       document.getElementById('pdfStatus').textContent = 'Importação concluída com sucesso.';
     }
@@ -480,28 +518,27 @@
       };
     }
 
-    function preencherTabelas(spe, grupo) {
-      document.getElementById('liqSPE').textContent   = spe.liquidez.toFixed(2);
-      document.getElementById('divSPE').textContent   = spe.divEbitda.toFixed(2);
-      document.getElementById('margSPE').textContent  = spe.margem.toFixed(1);
+    function preencherTabelasTomadorGrupo(tomador, grupo) {
+      document.getElementById('liqTomador').textContent  = tomador.liquidez.toFixed(2);
+      document.getElementById('divTomador').textContent  = tomador.divEbitda.toFixed(2);
+      document.getElementById('margTomador').textContent = tomador.margem.toFixed(1);
 
       document.getElementById('liqGrupo').textContent  = grupo.liquidez.toFixed(2);
       document.getElementById('divGrupo').textContent  = grupo.divEbitda.toFixed(2);
       document.getElementById('margGrupo').textContent = grupo.margem.toFixed(1);
     }
 
-    let chartInstance = null;
-    function desenharGrafico(spe, grupo) {
-      const ctx = document.getElementById('grafico').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-      chartInstance = new Chart(ctx, {
+    function desenharGraficoTomadorGrupo(tomador, grupo) {
+      const ctx = document.getElementById('graficoTomadorGrupo').getContext('2d');
+      if (chartTomadorGrupo) chartTomadorGrupo.destroy();
+      chartTomadorGrupo = new Chart(ctx, {
         type: 'bar',
         data: {
           labels: ['Liquidez Corrente', 'Dívida Líquida / EBITDA', 'Margem EBITDA (%)'],
           datasets: [
             {
-              label: 'SPE',
-              data: [spe.liquidez, spe.divEbitda, spe.margem],
+              label: 'Tomador',
+              data: [tomador.liquidez, tomador.divEbitda, tomador.margem],
               backgroundColor: '#2563eb',
             },
             {
@@ -516,11 +553,7 @@
           plugins: {
             legend: { position: 'bottom' },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-            },
-          },
+          scales: { y: { beginAtZero: true } },
         },
       });
     }
@@ -538,19 +571,15 @@
     }
 
     function calcScore(d, t) {
-      // Liquidez: quanto mais acima do mínimo melhor (limitado a 100)
       const lScore = Math.min((d.liquidez / t.liq) * 100, 100);
-      // Alavancagem: quanto mais abaixo do máximo melhor
       const aScore = Math.max(100 - (d.divEbitda / t.div) * 100, 0);
-      // Margem: quanto mais acima do mínimo melhor
       const rScore = Math.min((d.margem / t.marg) * 100, 100);
-
       return lScore * 0.3 + aScore * 0.4 + rScore * 0.3;
     }
 
-    function gerarParecer(spe, grupo, setor, modalidade) {
+    function gerarParecer(tomador, grupo, setor, modalidade) {
       const th = getGuidelines();
-      const score = calcScore(spe, th);
+      const score = calcScore(tomador, th);
       ultimoScore = score;
 
       let nivel = 'Moderado';
@@ -559,11 +588,11 @@
       else if (score < 60) { nivel = 'Alto'; tagClass = 'tag-alto'; }
 
       const grupoMelhora =
-        grupo.liquidez > spe.liquidez && grupo.divEbitda < spe.divEbitda;
+        grupo.liquidez > tomador.liquidez && grupo.divEbitda < tomador.divEbitda;
 
       const mitigacao = grupoMelhora
-        ? 'Risco moderado na SPE, mitigado pelo suporte financeiro e operacional do grupo econômico.'
-        : 'Risco semelhante entre SPE e grupo; recomenda-se reforçar a análise qualitativa e mitigadores.';
+        ? 'Risco moderado no Tomador, mitigado pelo suporte financeiro e operacional do grupo econômico.'
+        : 'Risco semelhante entre Tomador e grupo; recomenda-se reforçar a análise qualitativa e mitigadores.';
 
       const modalidadeInfo = guidelinesModalidade[modalidade]?.name || 'Modalidade';
 
@@ -571,7 +600,7 @@
       parecerDiv.innerHTML = `
         <h3>Resumo Quantitativo</h3>
         <p>
-          <strong>Nota de Risco:</strong> ${score.toFixed(1)} / 100
+          <strong>Nota de Risco (Tomador):</strong> ${score.toFixed(1)} / 100
           <span class="tag ${tagClass}">${nivel.toUpperCase()} RISCO</span>
         </p>
         <p>
@@ -581,9 +610,9 @@
         </p>
         <p><strong>Resumo:</strong> ${mitigacao}</p>
         <ul>
-          <li>Liquidez Corrente SPE: ${spe.liquidez.toFixed(2)} (mínimo ideal: ${th.liq.toFixed(2)})</li>
-          <li>Dívida Líquida/EBITDA SPE: ${spe.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
-          <li>Margem EBITDA SPE: ${spe.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
+          <li>Liquidez Corrente do Tomador: ${tomador.liquidez.toFixed(2)} (mínimo ideal: ${th.liq.toFixed(2)})</li>
+          <li>Dívida Líquida/EBITDA do Tomador: ${tomador.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
+          <li>Margem EBITDA do Tomador: ${tomador.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
           <li>Grupo Econômico: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
         </ul>
         <p class="hint">
@@ -593,6 +622,7 @@
       `;
 
       atualizarCapacidade(score);
+
       // mostra/oculta seção de permuta conforme modalidade
       document.getElementById('permutaSection').style.display =
         (modalidade === 'permutaFisica' || modalidade === 'permutaFinanceira') ? 'block' : 'none';
@@ -600,14 +630,9 @@
 
     function atualizarCapacidade(score) {
       const box = document.getElementById('capacidadeBox');
-      const obs = document.getElementById('capacidadeObs');
       let status = '—';
       let faixa = '—';
       let comentario = '';
-
-      if (score == null) {
-        box.querySelector('p strong')?.textContent;
-      }
 
       if (score >= 80) {
         status = 'Plena';
@@ -631,6 +656,127 @@
       `;
     }
 
+    // Histórico Tomador 2022–2025
+    async function lerHistoricoTomador() {
+      const anosInputs = [
+        { ano: 2022, id: 'pdfTomador2022' },
+        { ano: 2023, id: 'pdfTomador2023' },
+        { ano: 2024, id: 'pdfTomador2024' },
+        { ano: 2025, id: 'pdfTomador2025' },
+      ];
+      const lista = [];
+
+      for (const item of anosInputs) {
+        const input = document.getElementById(item.id);
+        if (input.files && input.files[0]) {
+          const dados = await parsePdf(input.files[0]);
+          lista.push({ ano: item.ano, ...dados });
+        }
+      }
+
+      if (!lista.length) {
+        alert('Selecione ao menos um PDF de histórico do Tomador (2022–2025).');
+        return;
+      }
+
+      // ordena por ano
+      lista.sort((a, b) => a.ano - b.ano);
+
+      desenharGraficoHistorico(lista);
+      gerarResumoHistorico(lista);
+    }
+
+    function desenharGraficoHistorico(lista) {
+      const ctx = document.getElementById('graficoHistorico').getContext('2d');
+      if (chartHistorico) chartHistorico.destroy();
+
+      const anos = lista.map(d => d.ano);
+      const liquidez = lista.map(d => d.liquidez);
+      const divEbitda = lista.map(d => d.divEbitda);
+      const margem = lista.map(d => d.margem);
+
+      chartHistorico = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: anos,
+          datasets: [
+            { label: 'Liquidez Corrente', data: liquidez, borderColor: '#2563eb', fill: false },
+            { label: 'Dívida Líquida/EBITDA', data: divEbitda, borderColor: '#16a34a', fill: false },
+            { label: 'Margem EBITDA (%)', data: margem, borderColor: '#f59e0b', fill: false },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+        },
+      });
+    }
+
+    function gerarResumoHistorico(lista) {
+      const resumoDiv = document.getElementById('resumoHistorico');
+      const th = getGuidelines();
+
+      const scores = lista.map(d => ({
+        ano: d.ano,
+        score: calcScore(d, th),
+        liquidez: d.liquidez,
+        divEbitda: d.divEbitda,
+        margem: d.margem,
+      }));
+
+      const primeiro = scores[0];
+      const ultimo = scores[scores.length - 1];
+      const deltaScore = ultimo.score - primeiro.score;
+
+      let tendenciaTexto = '';
+      if (deltaScore > 5) {
+        tendenciaTexto =
+          `A nota de risco evoluiu positivamente de ${primeiro.score.toFixed(1)} em ${primeiro.ano} ` +
+          `para ${ultimo.score.toFixed(1)} em ${ultimo.ano}, indicando melhora de crédito ao longo do período.`;
+      } else if (deltaScore < -5) {
+        tendenciaTexto =
+          `A nota de risco caiu de ${primeiro.score.toFixed(1)} em ${primeiro.ano} ` +
+          `para ${ultimo.score.toFixed(1)} em ${ultimo.ano}, sugerindo deterioração da posição financeira.`;
+      } else {
+        tendenciaTexto =
+          `A nota de risco permaneceu relativamente estável entre ${primeiro.ano} e ${ultimo.ano}, ` +
+          `oscilando de ${primeiro.score.toFixed(1)} para ${ultimo.score.toFixed(1)}.`;
+      }
+
+      const linhas = scores.map(s =>
+        `<tr>
+          <td>${s.ano}</td>
+          <td>${s.liquidez.toFixed(2)}</td>
+          <td>${s.divEbitda.toFixed(2)}</td>
+          <td>${s.margem.toFixed(1)}%</td>
+          <td>${s.score.toFixed(1)}</td>
+        </tr>`
+      ).join('');
+
+      resumoDiv.innerHTML = `
+        <h3>Evolução de Crédito do Tomador (2022–2025)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Ano</th>
+              <th>Liquidez</th>
+              <th>Dívida/EBITDA</th>
+              <th>Margem EBITDA</th>
+              <th>Nota de Risco</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhas}
+          </tbody>
+        </table>
+        <p style="margin-top:8px;">${tendenciaTexto}</p>
+        <p class="hint">
+          A evolução histórica complementa a análise pontual, ajudando a identificar melhoria contínua, estabilidade ou deterioração do Tomador.
+        </p>
+      `;
+    }
+
+    // Permuta
     function atualizarPermutaAlerta() {
       const sec = document.getElementById('permutaSection');
       if (sec.style.display === 'none') return;
@@ -664,14 +810,15 @@
     document.getElementById('percPermuta').addEventListener('input', atualizarPermutaAlerta);
     document.getElementById('valorTerreno').addEventListener('input', atualizarPermutaAlerta);
 
+    // Checklist Caixa
     function atualizarChecklist() {
       const body = document.getElementById('checklistBody').rows;
-      const plPositivo   = document.getElementById('plPositivo').checked;
+      const plPositivo    = document.getElementById('plPositivo').checked;
       const lucroPositivo = document.getElementById('lucroPositivo').checked;
       const semRestricoes = document.getElementById('semRestricoes').checked;
 
-      const liq = ultimoSPE ? ultimoSPE.liquidez : null;
-      const marg = ultimoSPE ? ultimoSPE.margem : null;
+      const liq  = ultimoTomador ? ultimoTomador.liquidez : null;
+      const marg = ultimoTomador ? ultimoTomador.margem : null;
 
       setStatusCell(body[0].cells[1], plPositivo);
       setStatusCell(body[1].cells[1], liq != null && liq >= 1.0);
@@ -679,7 +826,6 @@
       setStatusCell(body[3].cells[1], lucroPositivo);
       setStatusCell(body[4].cells[1], semRestricoes);
 
-      // Aderência simples: % dos critérios marcados como ok
       let total = 5;
       let ok = 0;
       for (let i = 0; i < body.length; i++) {
@@ -699,6 +845,7 @@
       }
     }
 
+    // Relatório
     function gerarPDF() {
       const win = window.open('', '_blank');
       win.document.write('<html><head><title>Relatório de Análise Técnica – Seguro Garantia</title></head><body>');
