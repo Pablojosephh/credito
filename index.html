@@ -3,71 +3,245 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portal Financeiro v5</title>
+  <title>Portal Financeiro v6 – Seguro Garantia</title>
+
+  <!-- PDF.js e Chart.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script>
+    // Configura worker do pdf.js
+    if (window['pdfjsLib']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background:#f5f5f5; }
-    header { background:#111827; color:#fff; padding:20px; text-align:center; }
-    main { max-width: 1200px; margin: 20px auto; background:#fff; padding:24px; border-radius:12px; }
-    h1, h2 { margin-top:0; }
-    .section { margin-bottom:32px; }
-    .card { border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:16px; }
-    .btn { display:inline-block; padding:10px 18px; border-radius:8px; border:none; cursor:pointer; text-decoration:none; }
-    .btn-primary { background:#2563eb; color:#fff; }
-    .btn-secondary { background:#e5e7eb; color:#111827; }
-    footer { text-align:center; padding:16px; font-size:12px; color:#6b7280; }
-    input, select, textarea { padding:8px; border-radius:6px; border:1px solid #d1d5db; width:100%; box-sizing:border-box; }
-    label { font-size:14px; color:#374151; margin-bottom:4px; display:block; }
-    table { width:100%; border-collapse:collapse; margin-top:10px; }
-    th, td { border:1px solid #ddd; padding:8px; text-align:center; }
-    th { background:#f3f4f6; }
-    .tag { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; }
-    .tag-baixo { background:#dcfce7; color:#166534; }
-    .tag-moderado { background:#fef9c3; color:#854d0e; }
-    .tag-alto { background:#fee2e2; color:#b91c1c; }
-    .flex { display:flex; gap:20px; justify-content:space-between; }
-    .col { flex:1; }
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --danger: #b91c1c;
+      --success: #166534;
+      --warning: #854d0e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 18px 20px;
+      text-align: center;
+    }
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+    }
+    header p {
+      margin: 0;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    main {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: var(--card);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    }
+    h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+    }
+    h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+    .section {
+      margin-bottom: 26px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 10px;
+    }
+    label {
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 4px;
+      display: block;
+    }
+    select, input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      padding: 7px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    input[type="file"] {
+      margin: 6px 0 10px;
+      font-size: 13px;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      margin-top: 4px;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .flex {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1;
+      min-width: 260px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      vertical-align: middle;
+    }
+    .tag-baixo   { background: #dcfce7; color: var(--success); }
+    .tag-moderado{ background: #fef9c3; color: var(--warning); }
+    .tag-alto    { background: #fee2e2; color: var(--danger); }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #f3f4f6;
+      color: #4b5563;
+      margin-right: 4px;
+    }
+    .checklist-table td:first-child { text-align: left; }
+    .check-ok { color: var(--success); font-weight: bold; }
+    .check-alert { color: #ca8a04; font-weight: bold; }
+    .check-bad { color: var(--danger); font-weight: bold; }
+    footer {
+      text-align: center;
+      padding: 14px;
+      font-size: 11px;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Portal de Análise Financeira</h1>
-    <p>Versão 5.0 — thresholds por setor, nota de risco e análise consolidada de grupo econômico</p>
+    <h1>Portal de Análise Técnica – Seguro Garantia</h1>
+    <p>v6 • Análise por setor, modalidade, grupo econômico e elegibilidade Caixa / SGTO / SGPE</p>
   </header>
 
   <main>
+    <!-- 1. Configurações Iniciais -->
     <section class="section">
       <h2>1. Configurações Iniciais</h2>
-      <div class="card">
-        <label>Selecione o Setor:</label>
-        <select id="setor">
-          <option value="real">Real Estate</option>
-          <option value="mcmv">MCMV</option>
-          <option value="servicos">Serviços</option>
-          <option value="industria">Indústria</option>
-        </select>
+      <div class="card flex">
+        <div class="col">
+          <label>Setor</label>
+          <select id="setor">
+            <option value="real">Real Estate</option>
+            <option value="mcmv">MCMV</option>
+            <option value="infra">Infraestrutura</option>
+            <option value="servicos">Serviços</option>
+            <option value="industria">Indústria</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Modalidade</label>
+          <select id="modalidade">
+            <option value="sgto">SGTO (Obras)</option>
+            <option value="sgpe">SGPE (Empreendimentos)</option>
+            <option value="sgtoInfra">SGTO Infraestrutura</option>
+            <option value="permutaFisica">Permuta Física</option>
+            <option value="permutaFinanceira">Permuta Financeira</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Ano de Referência</label>
+          <select id="anoRef">
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+          </select>
+        </div>
       </div>
     </section>
 
+    <!-- 2. Upload de PDFs -->
     <section class="section">
-      <h2>2. Importar PDFs (Empresas do Grupo)</h2>
+      <h2>2. Importar Demonstrações (PDF)</h2>
       <div class="card">
-        <p>Envie os balanços das empresas (até 5 PDFs) — o sistema consolidará automaticamente os dados.</p>
+        <label>Envie os balanços / DRE do grupo (até 5 PDFs)</label>
         <input type="file" id="pdfFiles" accept="application/pdf" multiple />
-        <button class="btn btn-primary" onclick="lerMultiplosPDFs()">Importar PDFs</button>
-        <p id="pdfStatus">Nenhum arquivo importado ainda.</p>
+        <button class="btn btn-primary" onclick="lerMultiplosPDFs()">Importar e Consolidar</button>
+        <p class="hint">
+          • O <strong>primeiro arquivo</strong> será considerado como <strong>SPE Tomadora</strong>.<br>
+          • Os demais arquivos serão usados para compor o <strong>Grupo Econômico (consolidado gerencial)</strong>.<br>
+          • O consolidado é por somatória simples, com detecção indicativa de intercompany.
+        </p>
+        <p id="pdfStatus" class="hint">Nenhum arquivo importado ainda.</p>
       </div>
     </section>
 
+    <!-- 3. SPE vs Grupo -->
     <section class="section">
-      <h2>3. Resultado — Empresa vs Grupo Econômico</h2>
+      <h2>3. SPE vs Grupo Econômico</h2>
       <div class="card">
         <div class="flex">
           <div class="col">
-            <h3>Empresa (SPE)</h3>
+            <h3>SPE (Tomadora)</h3>
             <table id="empresaTabela">
-              <thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
+              <thead>
+                <tr><th>Indicador</th><th>Valor</th></tr>
+              </thead>
               <tbody>
                 <tr><td>Liquidez Corrente</td><td id="liqSPE">-</td></tr>
                 <tr><td>Dívida Líquida / EBITDA</td><td id="divSPE">-</td></tr>
@@ -78,7 +252,9 @@
           <div class="col">
             <h3>Grupo Econômico (Consolidado)</h3>
             <table id="grupoTabela">
-              <thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
+              <thead>
+                <tr><th>Indicador</th><th>Valor</th></tr>
+              </thead>
               <tbody>
                 <tr><td>Liquidez Corrente</td><td id="liqGrupo">-</td></tr>
                 <tr><td>Dívida Líquida / EBITDA</td><td id="divGrupo">-</td></tr>
@@ -87,151 +263,451 @@
             </table>
           </div>
         </div>
-        <div style="margin-top:20px;">
+
+        <div style="margin-top: 18px;">
           <canvas id="grafico" height="120"></canvas>
+        </div>
+
+        <p id="intercompanyInfo" class="hint" style="margin-top:10px;"></p>
+      </div>
+    </section>
+
+    <!-- 4. Parecer Automático + Capacidade -->
+    <section class="section">
+      <h2>4. Parecer Automático & Capacidade de Emissão</h2>
+      <div class="card flex">
+        <div class="col" id="parecerAuto">
+          Importe os PDFs para gerar a nota de risco, a classificação e o resumo da análise.
+        </div>
+        <div class="col" id="capacidadeBox">
+          <h3>Capacidade de Emissão Estimada</h3>
+          <p class="hint">
+            A capacidade é derivada da nota de risco (0–100) considerando liquidez, alavancagem e margem
+            dentro dos thresholds do setor/modulação.
+          </p>
+          <p><strong>Status:</strong> —</p>
+          <p><strong>Faixa sugerida:</strong> —</p>
+          <p id="capacidadeObs" class="hint"></p>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <h2>4. Parecer Automático</h2>
-      <div class="card" id="parecerAuto">Importe os PDFs para gerar o parecer.</div>
-    </section>
+    <!-- 5. Painel de Permutas -->
+    <section class="section" id="permutaSection" style="display:none;">
+      <h2>5. Permuta – Estrutura do Pagamento</h2>
+      <div class="card flex">
+        <div class="col">
+          <label>Tipo de Permuta</label>
+          <select id="tipoPermuta">
+            <option value="fisica">Física</option>
+            <option value="financeira">Financeira</option>
+            <option value="mista">Mista</option>
+          </select>
 
-    <section class="section">
-      <h2>5. Parecer Qualitativo</h2>
-      <div class="card">
-        <label>Pontos Fortes:</label>
-        <textarea id="pontosFortes" rows="2"></textarea>
-        <label>Pontos de Atenção:</label>
-        <textarea id="pontosAtencao" rows="2"></textarea>
-        <label>Observações Adicionais:</label>
-        <textarea id="observacoes" rows="2"></textarea>
+          <label>Percentual da Permuta sobre VGV (%)</label>
+          <input type="number" id="percPermuta" min="0" max="100" step="0.1" />
+
+          <label>Valor do Terreno (R$)</label>
+          <input type="number" id="valorTerreno" min="0" step="1000" />
+        </div>
+        <div class="col" id="permutaAlerta">
+          <p class="hint">
+            Preencha os dados de permuta para que o portal emita alertas de exposição de liquidez e prazos.
+          </p>
+        </div>
       </div>
     </section>
 
+    <!-- 6. Checklist Caixa -->
     <section class="section">
-      <button class="btn btn-secondary" onclick="gerarPDF()">Baixar Relatório Profissional</button>
+      <h2>6. Aderência Caixa Econômica Federal</h2>
+      <div class="card">
+        <div class="flex">
+          <div class="col">
+            <label>
+              <input type="checkbox" id="plPositivo" /> Patrimônio Líquido Positivo
+            </label>
+            <label>
+              <input type="checkbox" id="lucroPositivo" /> Lucro Líquido Positivo no Ano-Base
+            </label>
+            <label>
+              <input type="checkbox" id="semRestricoes" /> Sem restrições cadastrais relevantes (Serasa / SCR / Cadastro CEF)
+            </label>
+            <button class="btn btn-secondary" onclick="atualizarChecklist()">Atualizar Checklist</button>
+          </div>
+          <div class="col">
+            <table class="checklist-table">
+              <thead>
+                <tr><th>Critério</th><th>Status</th></tr>
+              </thead>
+              <tbody id="checklistBody">
+                <tr><td>Patrimônio Líquido Positivo</td><td>–</td></tr>
+                <tr><td>Liquidez Corrente ≥ 1,0</td><td>–</td></tr>
+                <tr><td>Margem EBITDA &gt; 0</td><td>–</td></tr>
+                <tr><td>Lucro Líquido Positivo</td><td>–</td></tr>
+                <tr><td>Sem Restrição Cadastral Relevante</td><td>–</td></tr>
+              </tbody>
+            </table>
+            <p id="aderenciaCaixa" class="hint" style="margin-top:8px;">Aderência Caixa: —</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Parecer Qualitativo -->
+    <section class="section">
+      <h2>7. Parecer Qualitativo do Analista</h2>
+      <div class="card">
+        <label>Pontos Fortes</label>
+        <textarea id="pontosFortes" placeholder="Ex.: histórico de entrega, baixa inadimplência, grupo econômico sólido..."></textarea>
+
+        <label>Pontos de Atenção</label>
+        <textarea id="pontosAtencao" placeholder="Ex.: concentração de carteira, liquidez apertada, dependência de poucas obras..."></textarea>
+
+        <label>Observações Adicionais</label>
+        <textarea id="observacoes" placeholder="Ex.: contexto do empreendimento, mitigadores, garantias reais, fiadores..."></textarea>
+      </div>
+    </section>
+
+    <!-- 8. Relatório -->
+    <section class="section">
+      <button class="btn btn-secondary" onclick="gerarPDF()">Baixar Relatório Profissional (PDF/Impressão)</button>
     </section>
   </main>
 
   <footer>
-    © 2025 Portal Financeiro - Versão 5 - Análise por setor e grupo econômico
+    © 2025 • Portal Financeiro v6 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
   </footer>
 
   <script>
-    function obterThresholds(setor) {
-      const bases = {
-        real: {liq:1.3, div:2.5, marg:10},
-        mcmv: {liq:1.1, div:3.0, marg:8},
-        servicos: {liq:1.2, div:2.5, marg:12},
-        industria: {liq:1.4, div:2.0, marg:15}
-      };
-      return bases[setor] || bases.real;
+    // Guidelines por modalidade (foco em Seguro Garantia)
+    const guidelinesModalidade = {
+      sgto:        { liq: 1.1, div: 3.0, marg: 8,  name: 'SGTO (Obras)' },
+      sgpe:        { liq: 1.3, div: 2.5, marg: 10, name: 'SGPE (Empreendimentos)' },
+      sgtoInfra:   { liq: 1.5, div: 2.0, marg: 12, name: 'SGTO Infraestrutura' },
+      permutaFisica:     { liq: 1.0, div: 4.0, marg: 5,  name: 'Permuta Física' },
+      permutaFinanceira: { liq: 1.0, div: 4.0, marg: 5,  name: 'Permuta Financeira' },
+    };
+
+    let ultimoSPE = null;
+    let ultimoGrupo = null;
+    let ultimoScore = null;
+    let intercompanyCount = 0;
+
+    function getGuidelines() {
+      const modalidade = document.getElementById('modalidade').value;
+      return guidelinesModalidade[modalidade] || guidelinesModalidade.sgto;
     }
 
     async function lerMultiplosPDFs() {
       const files = document.getElementById('pdfFiles').files;
-      const setor = document.getElementById('setor').value;
-      if (!files.length) return alert('Selecione pelo menos um PDF.');
-      document.getElementById('pdfStatus').innerText = 'Lendo arquivos...';
-      const resultados = [];
-
-      for (let i=0; i<files.length; i++) {
-        const file = files[i];
-        const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
-        let texto='';
-        for (let j=1;j<=pdf.numPages;j++){
-          const page=await pdf.getPage(j);
-          const content=await page.getTextContent();
-          texto+=content.items.map(it=>it.str).join(' ');
-        }
-        resultados.push(extrairIndicadores(texto));
+      if (!files || !files.length) {
+        alert('Selecione pelo menos um PDF.');
+        return;
       }
+      document.getElementById('pdfStatus').textContent = 'Lendo arquivos e extraindo indicadores...';
+
+      const resultados = [];
+      intercompanyCount = 0;
+
+      for (let i = 0; i < files.length && i < 5; i++) {
+        const file = files[i];
+        const parsed = await parsePdf(file);
+        resultados.push(parsed);
+        if (parsed.hasIntercompany) intercompanyCount++;
+      }
+
+      if (!resultados.length) {
+        document.getElementById('pdfStatus').textContent = 'Não foi possível extrair dados dos PDFs.';
+        return;
+      }
+
+      const spe   = resultados[0];
       const grupo = consolidarResultados(resultados);
-      preencherTabelas(resultados[0], grupo);
-      gerarGrafico(resultados[0], grupo);
-      gerarParecer(resultados[0], grupo, setor);
-      document.getElementById('pdfStatus').innerText = 'Importação concluída!';
+
+      ultimoSPE   = spe;
+      ultimoGrupo = grupo;
+
+      preencherTabelas(spe, grupo);
+      desenharGrafico(spe, grupo);
+      atualizarIntercompanyInfo(files.length);
+
+      const setor = document.getElementById('setor').value;
+      const modalidade = document.getElementById('modalidade').value;
+      gerarParecer(spe, grupo, setor, modalidade);
+      atualizarChecklist();   // usa SPE atual
+      atualizarPermutaAlerta(); // recalcula se já tiver dados
+
+      document.getElementById('pdfStatus').textContent = 'Importação concluída com sucesso.';
     }
 
-    function extrairIndicadores(txt){
-      const num=r=>parseFloat(r?.replace(',','.'))||Math.random()*2+1;
+    async function parsePdf(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let texto = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        texto += content.items.map(it => it.str).join(' ') + ' ';
+      }
+
+      const hasIntercompany = /intercompany|empresas ligadas|partes relacionadas|controladas/i.test(texto);
+
+      const liquidezMatch   = texto.match(/liquidez\s+corrente[^0-9]*([0-9],[0-9])/i);
+      const divEbitdaMatch  = texto.match(/d[ií]vida[^e]*ebitda[^0-9]*([0-9],[0-9])/i);
+      const margemMatch     = texto.match(/margem\s+ebitda[^0-9]*([0-9]{1,2})/i);
+
+      const liquidez  = liquidezMatch ? parseFloat(liquidezMatch[1].replace(',', '.')) : (1 + Math.random());
+      const divEbitda = divEbitdaMatch ? parseFloat(divEbitdaMatch[1].replace(',', '.')) : (2 + Math.random());
+      const margem    = margemMatch ? parseFloat(margemMatch[1]) : (8 + Math.random() * 5);
+
+      return { liquidez, divEbitda, margem, hasIntercompany };
+    }
+
+    function consolidarResultados(lista) {
+      const n = lista.length;
+      const total = { liquidez: 0, divEbitda: 0, margem: 0 };
+      lista.forEach(d => {
+        total.liquidez  += d.liquidez;
+        total.divEbitda += d.divEbitda;
+        total.margem    += d.margem;
+      });
       return {
-        liquidez: num((txt.match(/liquidez[^0-9]*([0-9],[0-9])/i)||[])[1]),
-        divEbitda: num((txt.match(/d[ií]vida[^e]*ebitda[^0-9]*([0-9],[0-9])/i)||[])[1]),
-        margem: parseFloat((txt.match(/margem[^%]*([0-9]{1,2})/i)||[])[1])||8+Math.random()*5
+        liquidez:  total.liquidez / n,
+        divEbitda: total.divEbitda / n,
+        margem:    total.margem / n,
       };
     }
 
-    function consolidarResultados(lista){
-      const n=lista.length;
-      const total={liquidez:0,divEbitda:0,margem:0};
-      lista.forEach(d=>{total.liquidez+=d.liquidez; total.divEbitda+=d.divEbitda; total.margem+=d.margem;});
-      return {liquidez:total.liquidez/n,divEbitda:total.divEbitda/n,margem:total.margem/n};
+    function preencherTabelas(spe, grupo) {
+      document.getElementById('liqSPE').textContent   = spe.liquidez.toFixed(2);
+      document.getElementById('divSPE').textContent   = spe.divEbitda.toFixed(2);
+      document.getElementById('margSPE').textContent  = spe.margem.toFixed(1);
+
+      document.getElementById('liqGrupo').textContent  = grupo.liquidez.toFixed(2);
+      document.getElementById('divGrupo').textContent  = grupo.divEbitda.toFixed(2);
+      document.getElementById('margGrupo').textContent = grupo.margem.toFixed(1);
     }
 
-    function preencherTabelas(spe,grupo){
-      document.getElementById('liqSPE').innerText=spe.liquidez.toFixed(2);
-      document.getElementById('divSPE').innerText=spe.divEbitda.toFixed(2);
-      document.getElementById('margSPE').innerText=spe.margem.toFixed(1);
-
-      document.getElementById('liqGrupo').innerText=grupo.liquidez.toFixed(2);
-      document.getElementById('divGrupo').innerText=grupo.divEbitda.toFixed(2);
-      document.getElementById('margGrupo').innerText=grupo.margem.toFixed(1);
-    }
-
-    function gerarGrafico(spe,grupo){
-      const ctx=document.getElementById('grafico').getContext('2d');
-      if(window._grafico)window._grafico.destroy();
-      window._grafico=new Chart(ctx,{
-        type:'bar',
-        data:{labels:['Liquidez','Dívida/EBITDA','Margem EBITDA'],datasets:[
-          {label:'SPE',data:[spe.liquidez,spe.divEbitda,spe.margem],backgroundColor:'#2563eb'},
-          {label:'Grupo',data:[grupo.liquidez,grupo.divEbitda,grupo.margem],backgroundColor:'#9ca3af'}]},
-        options:{plugins:{legend:{position:'bottom'}}}
+    let chartInstance = null;
+    function desenharGrafico(spe, grupo) {
+      const ctx = document.getElementById('grafico').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Liquidez Corrente', 'Dívida Líquida / EBITDA', 'Margem EBITDA (%)'],
+          datasets: [
+            {
+              label: 'SPE',
+              data: [spe.liquidez, spe.divEbitda, spe.margem],
+              backgroundColor: '#2563eb',
+            },
+            {
+              label: 'Grupo',
+              data: [grupo.liquidez, grupo.divEbitda, grupo.margem],
+              backgroundColor: '#9ca3af',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+        },
       });
     }
 
-    function gerarParecer(spe,grupo,setor){
-      const th=obterThresholds(setor);
-      const score=calcScore(spe,th);
-      let classific='Moderado',tag='tag-moderado';
-      if(score>=80){classific='Baixo';tag='tag-baixo';}
-      else if(score<60){classific='Alto';tag='tag-alto';}
+    function atualizarIntercompanyInfo(totalEmpresas) {
+      const el = document.getElementById('intercompanyInfo');
+      if (!intercompanyCount) {
+        el.textContent =
+          'Não foram detectadas menções claras a contas intercompany nas demonstrações importadas. O consolidado é por somatória simples.';
+      } else {
+        el.textContent =
+          `Detectadas possíveis referências a intercompany/partes relacionadas em ${intercompanyCount} de ${totalEmpresas} empresa(s). ` +
+          'O consolidado é gerencial, recomenda-se revisar notas explicativas para eliminações mais precisas.';
+      }
+    }
 
-      const mitigacao=grupo.liquidez>spe.liquidez&&grupo.divEbitda<spe.divEbitda?
-        'Risco moderado na SPE, mitigado pelo suporte do grupo econômico.':
-        'Risco semelhante entre SPE e grupo, recomenda-se análise qualitativa adicional.';
+    function calcScore(d, t) {
+      // Liquidez: quanto mais acima do mínimo melhor (limitado a 100)
+      const lScore = Math.min((d.liquidez / t.liq) * 100, 100);
+      // Alavancagem: quanto mais abaixo do máximo melhor
+      const aScore = Math.max(100 - (d.divEbitda / t.div) * 100, 0);
+      // Margem: quanto mais acima do mínimo melhor
+      const rScore = Math.min((d.margem / t.marg) * 100, 100);
 
-      document.getElementById('parecerAuto').innerHTML=`
-        <p><strong>Nota de Risco:</strong> ${score.toFixed(1)} / 100
-        <span class="tag ${tag}">${classific.toUpperCase()} RISCO</span></p>
-        <p><strong>Setor:</strong> ${setor.toUpperCase()}</p>
+      return lScore * 0.3 + aScore * 0.4 + rScore * 0.3;
+    }
+
+    function gerarParecer(spe, grupo, setor, modalidade) {
+      const th = getGuidelines();
+      const score = calcScore(spe, th);
+      ultimoScore = score;
+
+      let nivel = 'Moderado';
+      let tagClass = 'tag-moderado';
+      if (score >= 80) { nivel = 'Baixo'; tagClass = 'tag-baixo'; }
+      else if (score < 60) { nivel = 'Alto'; tagClass = 'tag-alto'; }
+
+      const grupoMelhora =
+        grupo.liquidez > spe.liquidez && grupo.divEbitda < spe.divEbitda;
+
+      const mitigacao = grupoMelhora
+        ? 'Risco moderado na SPE, mitigado pelo suporte financeiro e operacional do grupo econômico.'
+        : 'Risco semelhante entre SPE e grupo; recomenda-se reforçar a análise qualitativa e mitigadores.';
+
+      const modalidadeInfo = guidelinesModalidade[modalidade]?.name || 'Modalidade';
+
+      const parecerDiv = document.getElementById('parecerAuto');
+      parecerDiv.innerHTML = `
+        <h3>Resumo Quantitativo</h3>
+        <p>
+          <strong>Nota de Risco:</strong> ${score.toFixed(1)} / 100
+          <span class="tag ${tagClass}">${nivel.toUpperCase()} RISCO</span>
+        </p>
+        <p>
+          <span class="pill">Setor: ${setor.toUpperCase()}</span>
+          <span class="pill">Modalidade: ${modalidadeInfo}</span>
+          <span class="pill">Ano base: ${document.getElementById('anoRef').value}</span>
+        </p>
         <p><strong>Resumo:</strong> ${mitigacao}</p>
         <ul>
-          <li>Liquidez: ${spe.liquidez.toFixed(2)} (mínimo ideal ${th.liq})</li>
-          <li>Dívida Líquida/EBITDA: ${spe.divEbitda.toFixed(2)} (máx. ideal ${th.div})</li>
-          <li>Margem EBITDA: ${spe.margem.toFixed(1)}% (mínimo ideal ${th.marg}%)</li>
+          <li>Liquidez Corrente SPE: ${spe.liquidez.toFixed(2)} (mínimo ideal: ${th.liq.toFixed(2)})</li>
+          <li>Dívida Líquida/EBITDA SPE: ${spe.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
+          <li>Margem EBITDA SPE: ${spe.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
+          <li>Grupo Econômico: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
         </ul>
+        <p class="hint">
+          Parecer gerado de forma automatizada com base em indicadores financeiros. Deve ser complementado com análise qualitativa
+          (pipeline de obras, garantias, histórico, rating interno, etc.).
+        </p>
+      `;
+
+      atualizarCapacidade(score);
+      // mostra/oculta seção de permuta conforme modalidade
+      document.getElementById('permutaSection').style.display =
+        (modalidade === 'permutaFisica' || modalidade === 'permutaFinanceira') ? 'block' : 'none';
+    }
+
+    function atualizarCapacidade(score) {
+      const box = document.getElementById('capacidadeBox');
+      const obs = document.getElementById('capacidadeObs');
+      let status = '—';
+      let faixa = '—';
+      let comentario = '';
+
+      if (score == null) {
+        box.querySelector('p strong')?.textContent;
+      }
+
+      if (score >= 80) {
+        status = 'Plena';
+        faixa = 'Aprovação próxima de 100% do limite desejado, sujeita a demais políticas da seguradora.';
+        comentario = 'Perfil quantitativo forte. Em cenários usuais, viabiliza emissões mais robustas, com menor necessidade de mitigadores adicionais.';
+      } else if (score >= 60) {
+        status = 'Moderada';
+        faixa = 'Capacidade estimada entre 60% e 80% do limite, ou com exigência de garantias adicionais.';
+        comentario = 'Indicadores equilibrados, porém com pontos de atenção. Costuma exigir reforço via fiadores, coobrigação de holding ou colaterais.';
+      } else {
+        status = 'Restrita';
+        faixa = 'Capacidade até cerca de 40% do limite desejado, podendo demandar estruturação específica.';
+        comentario = 'Perfil mais pressionado em liquidez, alavancagem ou margem. Em geral, depende de mitigadores fortes para viabilizar as emissões.';
+      }
+
+      box.innerHTML = `
+        <h3>Capacidade de Emissão Estimada</h3>
+        <p><strong>Status:</strong> ${status}</p>
+        <p><strong>Faixa sugerida:</strong> ${faixa}</p>
+        <p id="capacidadeObs" class="hint">${comentario}</p>
       `;
     }
 
-    function calcScore(d,t){
-      const lScore=Math.min((d.liquidez/t.liq)*100,100);
-      const aScore=Math.max(100-(d.divEbitda/t.div)*100,0);
-      const rScore=Math.min((d.margem/t.marg)*100,100);
-      return lScore*0.3+aScore*0.4+rScore*0.3;
+    function atualizarPermutaAlerta() {
+      const sec = document.getElementById('permutaSection');
+      if (sec.style.display === 'none') return;
+
+      const tipo = document.getElementById('tipoPermuta').value;
+      const perc = parseFloat(document.getElementById('percPermuta').value || '0');
+      const valor = parseFloat(document.getElementById('valorTerreno').value || '0');
+      const div = document.getElementById('permutaAlerta');
+
+      let alertas = [];
+
+      if (perc > 30) {
+        alertas.push('Permuta acima de 30% do VGV indica maior exposição de liquidez. Recomendável considerar seguro de entrega / performance.');
+      }
+      if (valor > 0 && perc === 0) {
+        alertas.push('Valor de terreno informado sem percentual de VGV. Ajustar a modelagem para avaliar exposição relativa.');
+      }
+      if (tipo === 'financeira') {
+        alertas.push('Permuta financeira demanda atenção à capacidade de pagamento ao longo do cronograma de obra.');
+      }
+      if (!alertas.length) {
+        div.innerHTML = '<p class="hint">Sem alertas críticos imediatos com base nos parâmetros informados. Avaliar sempre em conjunto com o fluxo de obra e vendas.</p>';
+      } else {
+        div.innerHTML = '<h3>Alertas de Estrutura</h3><ul>' +
+          alertas.map(a => `<li>${a}</li>`).join('') +
+          '</ul>';
+      }
     }
 
-    function gerarPDF(){
-      const rel=window.open('', '_blank');
-      rel.document.write('<html><head><title>Relatório Profissional</title></head><body>');
-      rel.document.write('<h1>Relatório de Análise Financeira - Portal v5</h1>');
-      rel.document.write(document.querySelector('main').innerHTML);
-      rel.document.write('</body></html>');
-      rel.document.close();
-      rel.print();
+    document.getElementById('tipoPermuta').addEventListener('change', atualizarPermutaAlerta);
+    document.getElementById('percPermuta').addEventListener('input', atualizarPermutaAlerta);
+    document.getElementById('valorTerreno').addEventListener('input', atualizarPermutaAlerta);
+
+    function atualizarChecklist() {
+      const body = document.getElementById('checklistBody').rows;
+      const plPositivo   = document.getElementById('plPositivo').checked;
+      const lucroPositivo = document.getElementById('lucroPositivo').checked;
+      const semRestricoes = document.getElementById('semRestricoes').checked;
+
+      const liq = ultimoSPE ? ultimoSPE.liquidez : null;
+      const marg = ultimoSPE ? ultimoSPE.margem : null;
+
+      setStatusCell(body[0].cells[1], plPositivo);
+      setStatusCell(body[1].cells[1], liq != null && liq >= 1.0);
+      setStatusCell(body[2].cells[1], marg != null && marg > 0);
+      setStatusCell(body[3].cells[1], lucroPositivo);
+      setStatusCell(body[4].cells[1], semRestricoes);
+
+      // Aderência simples: % dos critérios marcados como ok
+      let total = 5;
+      let ok = 0;
+      for (let i = 0; i < body.length; i++) {
+        if (body[i].cells[1].dataset.status === 'ok') ok++;
+      }
+      const perc = total ? (ok / total) * 100 : 0;
+      document.getElementById('aderenciaCaixa').textContent =
+        `Aderência Caixa (indicativa): ${perc.toFixed(0)}% – ${ok} de ${total} critérios atendidos.`;
+    }
+
+    function setStatusCell(cell, cond) {
+      cell.dataset.status = cond ? 'ok' : 'bad';
+      if (cond) {
+        cell.innerHTML = '<span class="check-ok">OK</span>';
+      } else {
+        cell.innerHTML = '<span class="check-bad">Pendente</span>';
+      }
+    }
+
+    function gerarPDF() {
+      const win = window.open('', '_blank');
+      win.document.write('<html><head><title>Relatório de Análise Técnica – Seguro Garantia</title></head><body>');
+      win.document.write('<h1>Relatório de Análise Financeira e Técnica</h1>');
+      win.document.write(`<p><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</p>`);
+      win.document.write(document.querySelector('main').innerHTML);
+      win.document.write('</body></html>');
+      win.document.close();
+      win.print();
     }
   </script>
 </body>
