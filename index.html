@@ -148,7 +148,7 @@
       vertical-align: middle;
     }
     .tag-baixo   { background: #dcfce7; color: var(--success); }
-    .tag-moderado{ background: #fef9c3; color: var(--warning); }
+    .tag-moderado{ background: #fef9c3; color: #854d0e; }
     .tag-alto    { background: #fee2e2; color: var(--danger); }
     .pill {
       display: inline-block;
@@ -192,7 +192,7 @@
           <input type="text" id="grupoEconomico" placeholder="Ex.: Grupo Realmix" />
 
           <label>Porte (faturamento)</label>
-          <input type="text" id="porteTomador" disabled placeholder="Será preenchido automaticamente pela DRE" />
+          <input type="text" id="porteTomador" disabled placeholder="Definido automaticamente pela DRE" />
 
           <label>Faturamento Anual Estimado</label>
           <input type="text" id="faturamentoTomador" disabled placeholder="Lido da DRE, quando disponível" />
@@ -231,13 +231,13 @@
     <section class="section">
       <h2>1. Importar Demonstrações (Tomador + Grupo)</h2>
       <div class="card">
-        <label>Envie os balanços / DRE do grupo (até 5 PDFs)</label>
+        <label>Envie os balanços / DRE do grupo (até 30 PDFs)</label>
         <input type="file" id="pdfFiles" accept="application/pdf" multiple />
         <button class="btn btn-primary" onclick="lerMultiplosPDFs()">Importar e Consolidar</button>
         <p class="hint">
           • O <strong>primeiro arquivo</strong> será considerado como <strong>Tomador</strong>.<br>
-          • Os demais arquivos compõem o <strong>Grupo Econômico (consolidado gerencial)</strong>.<br>
-          • O consolidado é por somatória simples, com detecção indicativa de intercompany.
+          • Os demais arquivos compõem o <strong>Grupo Econômico (consolidado gerencial)</strong>, quando houver mais de um CNPJ.<br>
+          • Se todos os arquivos forem do mesmo CNPJ, o portal tratará como múltiplos anos do Tomador, sem grupo distinto.
         </p>
         <p id="pdfStatus" class="hint">Nenhum arquivo importado ainda.</p>
       </div>
@@ -285,29 +285,35 @@
       </div>
     </section>
 
-    <!-- 3. Cálculo de Limite Necessário (MCMV) -->
+    <!-- 3. Cálculo de Limite Necessário -->
     <section class="section">
-      <h2>3. Cálculo de Limite Necessário – MCMV (SGTO / SGPE / Infra)</h2>
+      <h2>3. Cálculo de Limite Necessário</h2>
       <div class="card flex">
         <div class="col">
-          <label title="Custo total da obra vinculada ao SGTO. O limite de garantia corresponde a 15% deste valor.">
-            Custo da Obra (SGTO) – R$
+          <label title="Custo total da obra vinculada às apólices SGTO/SGPE. O mesmo custo pode ser utilizado para ambas, variando apenas o percentual.">
+            Custo da Obra (MCMV – base para SGTO e SGPE) – R$
           </label>
           <input type="number" id="custoSgto" min="0" step="1000" placeholder="Ex.: 10000000" />
 
-          <label title="Custo total do empreendimento vinculado à apólice SGPE. O limite é 2% deste valor.">
+          <label title="Custo total do empreendimento vinculado à apólice SGPE. Se o custo da obra for o mesmo, pode repetir o valor acima.">
             Custo do Empreendimento (SGPE) – R$
           </label>
           <input type="number" id="custoSgpe" min="0" step="1000" placeholder="Ex.: 50000000" />
 
-          <label title="Custo da obra de infraestrutura não incidente. O limite de SGTO Infra é 130% desse valor.">
+          <label title="Custo da obra de infraestrutura não incidente. O limite de SGTO Infra corresponde a 130% desse valor.">
             Custo da Obra Não Incidente (SGTO Infra) – R$
           </label>
           <input type="number" id="custoInfra" min="0" step="1000" placeholder="Ex.: 20000000" />
 
+          <label title="Valor de referência da permuta (física/financeira), quando aplicável, para composição do limite global.">
+            Valor de Referência da Permuta – R$
+          </label>
+          <input type="number" id="custoPermuta" min="0" step="1000" placeholder="Ex.: 3000000" />
+
           <button class="btn btn-secondary" onclick="calcularLimites()">Calcular Limites</button>
           <p class="hint">
-            A partir dos custos informados, o portal calcula automaticamente as importâncias seguradas necessárias para cada modalidade.
+            Com base nos custos informados, o portal estima as importâncias seguradas de SGTO (15%), SGPE (2%), SGTO Infra (130%)
+            e soma a permuta informada para compor o limite necessário global.
           </p>
         </div>
         <div class="col">
@@ -338,6 +344,12 @@
                 <td id="baseInfra">-</td>
                 <td>130%</td>
                 <td id="limInfra">-</td>
+              </tr>
+              <tr>
+                <td>Permutas</td>
+                <td id="basePermuta">-</td>
+                <td>100%</td>
+                <td id="limPermuta">-</td>
               </tr>
               <tr>
                 <th colspan="3">Total de Limite Necessário</th>
@@ -372,6 +384,7 @@
       <div class="card">
         <p class="hint">
           Opcional: importe os balanços do Tomador por ano para acompanhar a evolução de crédito no tempo.
+          Se os campos de identificação ainda estiverem vazios, o portal tentará preenchê-los a partir do primeiro PDF histórico.
         </p>
         <div class="flex">
           <div class="col">
@@ -473,13 +486,13 @@
       <h2>8. Parecer Qualitativo do Analista</h2>
       <div class="card">
         <label>Pontos Fortes</label>
-        <textarea id="pontosFortes" placeholder="Ex.: histórico de entrega, baixa inadimplência, grupo econômico sólido..."></textarea>
+        <textarea id="pontosFortes">Grupo com histórico de atuação no segmento MCMV, relacionamento consolidado com instituições financeiras e seguradoras e baixa sinistralidade em operações de seguro garantia. Demonstra capacidade de entrega de obras, com carteira de empreendimentos em andamento e histórico de conclusão dentro dos prazos contratados. Estrutura societária conhecida e nível de governança compatível com o porte da operação.</textarea>
 
         <label>Pontos de Atenção</label>
-        <textarea id="pontosAtencao" placeholder="Ex.: concentração de carteira, liquidez apertada, dependência de poucas obras..."></textarea>
+        <textarea id="pontosAtencao">Liquidez corrente próxima dos limites de conforto para a modalidade, com pressão moderada sobre o capital de giro. Alavancagem financeira requer monitoramento, especialmente considerando o cronograma de desembolsos das obras e eventual concentração de receitas em poucos clientes ou regiões. Margens podem ser afetadas por aumento de custos de obra, atrasos em repasses ou ritmo de vendas abaixo do esperado.</textarea>
 
         <label>Observações Adicionais</label>
-        <textarea id="observacoes" placeholder="Ex.: contexto do empreendimento, mitigadores, garantias reais, fiadores..."></textarea>
+        <textarea id="observacoes">Operação vinculada a empreendimento MCMV com financiamento Caixa, com cronograma físico-financeiro definido e estrutura de garantias envolvendo seguro garantia, eventuais permutas e garantias adicionais do grupo econômico. Recomenda-se acompanhamento periódico dos indicadores financeiros e da evolução das obras, bem como atualização cadastral antes de renovações ou novas emissões relevantes.</textarea>
       </div>
     </section>
 
@@ -509,7 +522,8 @@
     let chartTomadorGrupo = null;
     let chartHistorico    = null;
     let intercompanyDetalhes = [];
-    let limiteSgto = 0, limiteSgpe = 0, limiteInfra = 0, limiteTotal = 0;
+    let grupoEhMesmoTomador = false;
+    let limiteSgto = 0, limiteSgpe = 0, limiteInfra = 0, limitePermuta = 0, limiteTotal = 0;
 
     function getGuidelines() {
       const modalidade = document.getElementById('modalidade').value;
@@ -555,7 +569,7 @@
       const resultados = [];
       intercompanyDetalhes = [];
 
-      for (let i = 0; i < files.length && i < 5; i++) {
+      for (let i = 0; i < files.length && i < 30; i++) {
         const isTomador = (i === 0);
         const parsed = await parsePdf(files[i], isTomador);
         resultados.push(parsed);
@@ -572,8 +586,11 @@
         return;
       }
 
+      const cnpjs = resultados.map(r => r.cnpj).filter(Boolean);
+      grupoEhMesmoTomador = (files.length > 1 && cnpjs.length && (new Set(cnpjs)).size === 1);
+
       const tomador = resultados[0];
-      const grupo   = consolidarResultados(resultados);
+      const grupo   = grupoEhMesmoTomador ? tomador : consolidarResultados(resultados);
 
       ultimoTomador = tomador;
       ultimoGrupo   = grupo;
@@ -714,16 +731,22 @@
       const det = document.getElementById('intercompanyDetalhes');
       const comIntercompany = intercompanyDetalhes.filter(d => d.hasIntercompany).length;
 
-      if (!comIntercompany) {
+      if (grupoEhMesmoTomador) {
+        el.textContent =
+          'Os documentos importados parecem pertencer ao mesmo CNPJ (Tomador), possivelmente anos diferentes. Não foi identificado grupo econômico distinto; os indicadores do grupo replicam os do Tomador.';
+      } else if (!comIntercompany) {
         el.textContent =
           'Não foram detectadas menções claras a contas intercompany nas demonstrações importadas. O consolidado é por somatória simples.';
+      } else {
+        el.textContent =
+          `Detectadas possíveis referências a intercompany/partes relacionadas em ${comIntercompany} de ${totalEmpresas} empresa(s). ` +
+          'Recomenda-se revisar notas explicativas das empresas marcadas.';
+      }
+
+      if (!intercompanyDetalhes.length) {
         det.innerHTML = '';
         return;
       }
-
-      el.textContent =
-        `Detectadas possíveis referências a intercompany/partes relacionadas em ${comIntercompany} de ${totalEmpresas} empresa(s). ` +
-        'Recomenda-se revisar notas explicativas das empresas marcadas.';
 
       let html = '<table><thead><tr><th>Arquivo</th><th>Intercompany?</th><th>Termos encontrados</th></tr></thead><tbody>';
       intercompanyDetalhes.forEach(item => {
@@ -757,9 +780,14 @@
       const grupoMelhora =
         grupo.liquidez > tomador.liquidez && grupo.divEbitda < tomador.divEbitda;
 
-      const mitigacao = grupoMelhora
-        ? 'Risco moderado no Tomador, mitigado pelo suporte financeiro e operacional do grupo econômico.'
-        : 'Risco semelhante entre Tomador e grupo; recomenda-se reforçar a análise qualitativa e mitigadores.';
+      let mitigacao;
+      if (grupoEhMesmoTomador) {
+        mitigacao = 'Análise baseada exclusivamente nos indicadores do Tomador, sem grupo econômico distinto identificado. Recomenda-se complementar com avaliação qualitativa, garantias e histórico de relacionamento.';
+      } else if (grupoMelhora) {
+        mitigacao = 'Risco moderado no Tomador, com alavancagem superior à do grupo econômico, mitigado pelo suporte financeiro e operacional deste.';
+      } else {
+        mitigacao = 'Risco semelhante entre Tomador e grupo, sem mitigação relevante via consolidação; recomenda-se reforçar garantias adicionais e demais mitigadores.';
+      }
 
       const modalidadeInfo = guidelinesModalidade[modalidade]?.name || 'Modalidade';
 
@@ -789,7 +817,8 @@
           <li>Liquidez Corrente do Tomador: ${tomador.liquidez.toFixed(2)} (mínimo ideal: ${th.liq.toFixed(2)})</li>
           <li>Dívida Líquida/EBITDA do Tomador: ${tomador.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
           <li>Margem EBITDA do Tomador: ${tomador.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
-          <li>Grupo Econômico: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
+          <li>Indicadores do Grupo: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
+          <li>Alavancagem relativa: Dívida Líq./EBITDA do Tomador ${tomador.divEbitda.toFixed(2)}x vs Grupo ${grupo.divEbitda.toFixed(2)}x.</li>
         </ul>
         <p class="hint">
           Parecer gerado de forma automatizada com base em indicadores financeiros. Deve ser complementado com análise qualitativa
@@ -806,18 +835,22 @@
       const custoSgto = parseFloat(document.getElementById('custoSgto').value || '0');
       const custoSgpe = parseFloat(document.getElementById('custoSgpe').value || '0');
       const custoInfra = parseFloat(document.getElementById('custoInfra').value || '0');
+      const custoPermuta = parseFloat(document.getElementById('custoPermuta').value || '0');
 
       limiteSgto = custoSgto * 0.15;
       limiteSgpe = custoSgpe * 0.02;
       limiteInfra = custoInfra * 1.30;
-      limiteTotal = limiteSgto + limiteSgpe + limiteInfra;
+      limitePermuta = custoPermuta;
+      limiteTotal = limiteSgto + limiteSgpe + limiteInfra + limitePermuta;
 
       document.getElementById('baseSgto').textContent = formatarMoeda(custoSgto);
       document.getElementById('baseSgpe').textContent = formatarMoeda(custoSgpe);
       document.getElementById('baseInfra').textContent = formatarMoeda(custoInfra);
+      document.getElementById('basePermuta').textContent = formatarMoeda(custoPermuta);
       document.getElementById('limSgto').textContent = formatarMoeda(limiteSgto);
       document.getElementById('limSgpe').textContent = formatarMoeda(limiteSgpe);
       document.getElementById('limInfra').textContent = formatarMoeda(limiteInfra);
+      document.getElementById('limPermuta').textContent = formatarMoeda(limitePermuta);
       document.getElementById('limTotal').textContent = formatarMoeda(limiteTotal);
 
       if (ultimoScore != null) {
@@ -828,6 +861,7 @@
     document.getElementById('custoSgto').addEventListener('input', calcularLimites);
     document.getElementById('custoSgpe').addEventListener('input', calcularLimites);
     document.getElementById('custoInfra').addEventListener('input', calcularLimites);
+    document.getElementById('custoPermuta').addEventListener('input', calcularLimites);
 
     function atualizarCapacidade(score) {
       const box = document.getElementById('capacidadeBox');
@@ -863,7 +897,7 @@
         const maxV = limiteTotal * maxPerc;
         faixaTexto = `${formatarMoeda(minV)} a ${formatarMoeda(maxV)} (sobre o limite necessário de ${formatarMoeda(limiteTotal)})`;
       } else {
-        faixaTexto = 'Informe os custos das obras para calcular a faixa de limite sugerido em R$.';
+        faixaTexto = 'Informe os custos das obras e permutas para calcular a faixa de limite sugerido em R$.';
       }
 
       box.innerHTML = `
@@ -885,10 +919,13 @@
       ];
       const lista = [];
 
+      let usouMeta = !!(document.getElementById('nomeTomador').value || document.getElementById('cnpjTomador').value || faturamentoTomadorValor);
       for (const item of anosInputs) {
         const input = document.getElementById(item.id);
         if (input.files && input.files[0]) {
-          const dados = await parsePdf(input.files[0], false);
+          const usarComoMeta = !usouMeta;
+          const dados = await parsePdf(input.files[0], usarComoMeta);
+          if (usarComoMeta) usouMeta = true;
           lista.push({ ano: item.ano, ...dados });
         }
       }
@@ -1040,10 +1077,10 @@
       const divE = ultimoTomador ? ultimoTomador.divEbitda : null;
 
       setStatusCell(body[0].cells[1], plPositivo);
-      setStatusCell(body[1].cells[1], liq != null && liq >= 1.2);
-      setStatusCell(body[2].cells[1], marg != null && marg > 0);
+      setStatusCell(body[1].cells[1], liq != null ? liq >= 1.2 : null);
+      setStatusCell(body[2].cells[1], marg != null ? marg > 0 : null);
       setStatusCell(body[3].cells[1], lucroPositivo);
-      setStatusCell(body[4].cells[1], divE != null && divE <= 3.0);
+      setStatusCell(body[4].cells[1], divE != null ? divE <= 3.0 : null);
       setStatusCell(body[5].cells[1], semRestricoes);
 
       let total = body.length;
@@ -1057,11 +1094,15 @@
     }
 
     function setStatusCell(cell, cond) {
-      cell.dataset.status = cond ? 'ok' : 'bad';
-      if (cond) {
-        cell.innerHTML = '<span class="check-ok">OK</span>';
+      if (cond === null || cond === undefined) {
+        cell.dataset.status = 'pendente';
+        cell.innerHTML = '<span class="check-bad">PENDENTE</span>';
+      } else if (cond) {
+        cell.dataset.status = 'ok';
+        cell.innerHTML = '<span class="check-ok">SIM</span>';
       } else {
-        cell.innerHTML = '<span class="check-bad">Pendente</span>';
+        cell.dataset.status = 'bad';
+        cell.innerHTML = '<span class="check-bad">NÃO</span>';
       }
     }
 
