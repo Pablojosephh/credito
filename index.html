@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portal Financeiro v8 – Seguro Garantia</title>
+  <title>Portal Financeiro v9 – Seguro Garantia</title>
 
   <!-- PDF.js e Chart.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -162,6 +162,7 @@
     .checklist-table td:first-child { text-align: left; }
     .check-ok { color: var(--success); font-weight: bold; }
     .check-bad { color: var(--danger); font-weight: bold; }
+    .check-pendente { color: var(--muted); font-weight: bold; }
     footer {
       text-align: center;
       padding: 14px;
@@ -173,7 +174,7 @@
 <body>
   <header>
     <h1>Portal de Análise Técnica – Seguro Garantia</h1>
-    <p>v8 • Tomador x Grupo, histórico 2022–2025, limites MCMV (SGTO/SGPE/Infra) e aderência Caixa</p>
+    <p>v9 • Tomador x Grupo, histórico 2022–2025, limites MCMV/Infra/Permutas e aderência Caixa</p>
   </header>
 
   <main>
@@ -240,6 +241,7 @@
           • Se todos os arquivos forem do mesmo CNPJ, o portal tratará como múltiplos anos do Tomador, sem grupo distinto.
         </p>
         <p id="pdfStatus" class="hint">Nenhum arquivo importado ainda.</p>
+        <div id="listaArquivos" class="hint" style="margin-top:8px;"></div>
       </div>
     </section>
 
@@ -290,7 +292,16 @@
       <h2>3. Cálculo de Limite Necessário</h2>
       <div class="card flex">
         <div class="col">
-          <label title="Custo total da obra vinculada às apólices SGTO/SGPE. O mesmo custo pode ser utilizado para ambas, variando apenas o percentual.">
+          <label title="Opcional: envie o cronograma/custo da obra em PDF para tentativa de leitura automática do custo total. Os valores preenchidos podem ser revisados manualmente.">
+            Documento de custos / cronograma (PDF) – opcional
+          </label>
+          <input type="file" id="pdfCustos" accept="application/pdf" />
+          <button class="btn btn-secondary" onclick="lerCustosDocumento()">Ler custos do documento</button>
+          <p class="hint">
+            A leitura automática é heurística e pode não localizar corretamente em todos os layouts de balanço/cronograma. Sempre revise os valores.
+          </p>
+
+          <label title="Custo total da obra vinculada às apólices SGTO/SGPE. O mesmo custo pode ser utilizado para ambas, variando apenas o percentual (15% e 2%).">
             Custo da Obra (MCMV – base para SGTO e SGPE) – R$
           </label>
           <input type="number" id="custoSgto" min="0" step="1000" placeholder="Ex.: 10000000" />
@@ -503,7 +514,7 @@
   </main>
 
   <footer>
-    © 2025 • Portal Financeiro v8 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
+    © 2025 • Portal Financeiro v9 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
   </footer>
 
   <script>
@@ -598,6 +609,7 @@
       preencherTabelasTomadorGrupo(tomador, grupo);
       desenharGraficoTomadorGrupo(tomador, grupo);
       atualizarIntercompanyInfo(files.length);
+      atualizarListaArquivos(files, resultados);
 
       const setor = document.getElementById('setor').value;
       const modalidade = document.getElementById('modalidade').value;
@@ -636,7 +648,6 @@
       const divEbitda = divEbitdaMatch ? parseFloat(divEbitdaMatch[1].replace(',', '.')) : (2 + Math.random());
       const margem    = margemMatch ? parseFloat(margemMatch[1]) : (8 + Math.random() * 5);
 
-      // Meta: CNPJ, Razão Social, Receita
       let cnpj = null;
       const cnpjMatch = texto.match(/CNPJ[^0-9]*([\d.\-\/]{14,18})/i);
       if (cnpjMatch) cnpj = cnpjMatch[1];
@@ -760,6 +771,33 @@
       det.innerHTML = html;
     }
 
+    function atualizarListaArquivos(files, resultados) {
+      const div = document.getElementById('listaArquivos');
+      if (!files || !files.length) {
+        div.innerHTML = '';
+        return;
+      }
+
+      let html = '<table><thead><tr><th>Arquivo</th><th>Papel</th><th>CNPJ</th><th>Razão Social (quando disponível)</th></tr></thead><tbody>';
+      const cnpjBase = resultados[0].cnpj || null;
+
+      for (let i = 0; i < files.length && i < resultados.length; i++) {
+        const r = resultados[i];
+        let papel = 'Empresa do Grupo';
+        if (i === 0) papel = 'Tomador (principal)';
+        else if (grupoEhMesmoTomador) papel = 'Tomador (outro ano)';
+
+        html += `<tr>
+          <td>${files[i].name}</td>
+          <td>${papel}</td>
+          <td>${r.cnpj || '-'}</td>
+          <td>${r.razaoSocial || '-'}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      div.innerHTML = html;
+    }
+
     function calcScore(d, t) {
       const lScore = Math.min((d.liquidez / t.liq) * 100, 100);
       const aScore = Math.max(100 - (d.divEbitda / t.div) * 100, 0);
@@ -784,7 +822,7 @@
       if (grupoEhMesmoTomador) {
         mitigacao = 'Análise baseada exclusivamente nos indicadores do Tomador, sem grupo econômico distinto identificado. Recomenda-se complementar com avaliação qualitativa, garantias e histórico de relacionamento.';
       } else if (grupoMelhora) {
-        mitigacao = 'Risco moderado no Tomador, com alavancagem superior à do grupo econômico, mitigado pelo suporte financeiro e operacional deste.';
+        mitigacao = 'Risco moderado no Tomador, com alavancagem (Dívida Líq./EBITDA) superior à do grupo econômico, mitigado pelo suporte financeiro e operacional deste.';
       } else {
         mitigacao = 'Risco semelhante entre Tomador e grupo, sem mitigação relevante via consolidação; recomenda-se reforçar garantias adicionais e demais mitigadores.';
       }
@@ -818,7 +856,7 @@
           <li>Dívida Líquida/EBITDA do Tomador: ${tomador.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
           <li>Margem EBITDA do Tomador: ${tomador.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
           <li>Indicadores do Grupo: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
-          <li>Alavancagem relativa: Dívida Líq./EBITDA do Tomador ${tomador.divEbitda.toFixed(2)}x vs Grupo ${grupo.divEbitda.toFixed(2)}x.</li>
+          <li>Alavancagem relativa (Dívida Líq./EBITDA): Tomador ${tomador.divEbitda.toFixed(2)}x vs Grupo ${grupo.divEbitda.toFixed(2)}x.</li>
         </ul>
         <p class="hint">
           Parecer gerado de forma automatizada com base em indicadores financeiros. Deve ser complementado com análise qualitativa
@@ -1096,7 +1134,7 @@
     function setStatusCell(cell, cond) {
       if (cond === null || cond === undefined) {
         cell.dataset.status = 'pendente';
-        cell.innerHTML = '<span class="check-bad">PENDENTE</span>';
+        cell.innerHTML = '<span class="check-pendente">PENDENTE</span>';
       } else if (cond) {
         cell.dataset.status = 'ok';
         cell.innerHTML = '<span class="check-ok">SIM</span>';
@@ -1104,6 +1142,59 @@
         cell.dataset.status = 'bad';
         cell.innerHTML = '<span class="check-bad">NÃO</span>';
       }
+    }
+
+    // Leitura de custos do documento (cronograma/custos)
+    async function lerCustosDocumento() {
+      const input = document.getElementById('pdfCustos');
+      if (!input.files || !input.files[0]) {
+        alert('Selecione um PDF de custos/cronograma para leitura automática.');
+        return;
+      }
+      const file = input.files[0];
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let texto = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          texto += content.items.map(it => it.str).join(' ') + ' ';
+        }
+
+        const custoObra = extrairCustoObra(texto);
+        if (custoObra) {
+          document.getElementById('custoSgto').value = Math.round(custoObra);
+          document.getElementById('custoSgpe').value = Math.round(custoObra);
+          calcularLimites();
+          alert('Custo da obra detectado no documento e aplicado como base para SGTO/SGPE. Revise os valores antes de seguir.');
+        } else {
+          alert('Não foi possível localizar um valor claro de custo de obra no documento. Preencha manualmente os campos de custo.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Ocorreu um erro ao tentar ler o documento de custos. Preencha os campos manualmente.');
+      }
+    }
+
+    function extrairCustoObra(txt) {
+      const patterns = [
+        /Custo[^\n]{0,40}Obra[^\d]*([\d\.]+,\d{2})/i,
+        /Custo[^\n]{0,40}Total[^\d]*([\d\.]+,\d{2})/i,
+        /Or[çc]amento[^\n]{0,40}Obra[^\d]*([\d\.]+,\d{2})/i,
+      ];
+      const valores = [];
+      const parseValor = (s) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+
+      for (const p of patterns) {
+        let m;
+        while ((m = p.exec(txt)) !== null) {
+          if (m[1]) valores.push(parseValor(m[1]));
+        }
+      }
+      if (!valores.length) return null;
+      return Math.max(...valores);
     }
 
     // Relatório
