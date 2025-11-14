@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portal Financeiro v9 – Seguro Garantia</title>
+  <title>Portal Financeiro v9.1 – Seguro Garantia</title>
 
   <!-- PDF.js e Chart.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
@@ -174,7 +174,7 @@
 <body>
   <header>
     <h1>Portal de Análise Técnica – Seguro Garantia</h1>
-    <p>v9 • Tomador x Grupo, histórico 2022–2025, limites MCMV/Infra/Permutas e aderência Caixa</p>
+    <p>v9.1 • Tomador x Grupo, histórico 2022–2025, limites MCMV/Infra/Permutas e aderência Caixa</p>
   </header>
 
   <main>
@@ -315,17 +315,6 @@
             Custo da Obra Não Incidente (SGTO Infra) – R$
           </label>
           <input type="number" id="custoInfra" min="0" step="1000" placeholder="Ex.: 20000000" />
-
-          <label title="Valor de referência da permuta (física/financeira), quando aplicável, para composição do limite global.">
-            Valor de Referência da Permuta – R$
-          </label>
-          <input type="number" id="custoPermuta" min="0" step="1000" placeholder="Ex.: 3000000" />
-
-          <button class="btn btn-secondary" onclick="calcularLimites()">Calcular Limites</button>
-          <p class="hint">
-            Com base nos custos informados, o portal estima as importâncias seguradas de SGTO (15%), SGPE (2%), SGTO Infra (130%)
-            e soma a permuta informada para compor o limite necessário global.
-          </p>
         </div>
         <div class="col">
           <table>
@@ -357,10 +346,16 @@
                 <td id="limInfra">-</td>
               </tr>
               <tr>
-                <td>Permutas</td>
-                <td id="basePermuta">-</td>
+                <td>Permuta Física</td>
+                <td id="basePermutaFisica">-</td>
+                <td id="fatorPermutaFisica">-</td>
+                <td id="limPermutaFisica">-</td>
+              </tr>
+              <tr>
+                <td>Permuta Financeira</td>
+                <td id="basePermutaFin">-</td>
                 <td>100%</td>
-                <td id="limPermuta">-</td>
+                <td id="limPermutaFin">-</td>
               </tr>
               <tr>
                 <th colspan="3">Total de Limite Necessário</th>
@@ -438,15 +433,18 @@
             <option value="mista">Mista</option>
           </select>
 
+          <label>VGV do Empreendimento (R$)</label>
+          <input type="number" id="vgvPermuta" min="0" step="1000" />
+
           <label>Percentual da Permuta sobre VGV (%)</label>
           <input type="number" id="percPermuta" min="0" max="100" step="0.1" />
 
-          <label>Valor do Terreno (R$)</label>
-          <input type="number" id="valorTerreno" min="0" step="1000" />
+          <label>Valor da Permuta Financeira (R$)</label>
+          <input type="number" id="valorPermutaFin" min="0" step="1000" />
         </div>
         <div class="col" id="permutaAlerta">
           <p class="hint">
-            Preencha os dados de permuta para que o portal emita alertas de exposição de liquidez e prazos.
+            Preencha os dados de permuta para que o portal emita alertas de exposição de liquidez e prazos e atualize o cálculo do limite necessário.
           </p>
         </div>
       </div>
@@ -514,7 +512,7 @@
   </main>
 
   <footer>
-    © 2025 • Portal Financeiro v9 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
+    © 2025 • Portal Financeiro v9.1 • Uso interno – apoio à análise técnica de crédito em Seguro Garantia.
   </footer>
 
   <script>
@@ -534,7 +532,8 @@
     let chartHistorico    = null;
     let intercompanyDetalhes = [];
     let grupoEhMesmoTomador = false;
-    let limiteSgto = 0, limiteSgpe = 0, limiteInfra = 0, limitePermuta = 0, limiteTotal = 0;
+    let limiteSgto = 0, limiteSgpe = 0, limiteInfra = 0;
+    let limitePermutaFisica = 0, limitePermutaFin = 0, limiteTotal = 0;
 
     function getGuidelines() {
       const modalidade = document.getElementById('modalidade').value;
@@ -568,6 +567,63 @@
       }
     }
 
+    function extrairCnpjGlobal(txt) {
+      const patterns = [
+        /CNPJ[^0-9]{0,15}([\d]{2}\.?[\d]{3}\.?[\d]{3}\/?[\d]{4}-?[\d]{2})/i,
+        /CNPJ\/MF[^0-9]{0,15}([\d]{2}\.?[\d]{3}\.?[\d]{3}\/?[\d]{4}-?[\d]{2})/i,
+      ];
+      for (const p of patterns) {
+        const m = p.exec(txt);
+        if (m && m[1]) return m[1];
+      }
+      const generic = /([\d]{2}\.?[\d]{3}\.?[\d]{3}\/?[\d]{4}-?[\d]{2})/.exec(txt);
+      return generic ? generic[1] : null;
+    }
+
+    function extrairRazaoSocialGlobal(txt) {
+      const patterns = [
+        /Raz[ãa]o\s+Social[:\s\-]*([A-Za-z0-9\s\.,\-&]{3,120})/i,
+        /Nome\s+Empresarial[:\s\-]*([A-Za-z0-9\s\.,\-&]{3,120})/i,
+        /Denomina[cç][aã]o\s+Social[:\s\-]*([A-Za-z0-9\s\.,\-&]{3,120})/i,
+      ];
+      for (const p of patterns) {
+        const m = p.exec(txt);
+        if (m && m[1]) return m[1];
+      }
+      return null;
+    }
+
+    function extrairReceita(txt) {
+      const patterns = [
+        /Receita[^\n]{0,60}Bruta[^\d]*([\d\.]+,\d{2})/i,
+        /Receita[^\n]{0,60}Operacional[^\n]{0,20}Bruta[^\d]*([\d\.]+,\d{2})/i,
+        /Receita[^\n]{0,60}L[ií]quida[^\d]*([\d\.]+,\d{2})/i,
+        /Receita[^\n]{0,60}de[^\n]{0,40}Vendas[^\n]{0,40}Im[óo]veis[^\d]*([\d\.]+,\d{2})/i,
+      ];
+      const valores = [];
+      const parseValor = (s) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+
+      for (const p of patterns) {
+        let m;
+        while ((m = p.exec(txt)) !== null) {
+          if (m[1]) valores.push(parseValor(m[1]));
+        }
+      }
+      if (!valores.length) return null;
+      return Math.max(...valores);
+    }
+
+    function extrairIntercompanySnippets(txt) {
+      const rg = /(.{0,60}(intercompany|empresas ligadas|partes relacionadas|controladas).{0,60})/ig;
+      const trechos = [];
+      let m;
+      while ((m = rg.exec(txt)) !== null) {
+        if (m[1]) trechos.push(m[1].trim());
+        if (trechos.length >= 3) break;
+      }
+      return trechos;
+    }
+
     async function lerMultiplosPDFs() {
       const files = document.getElementById('pdfFiles').files;
       if (!files || !files.length) {
@@ -587,7 +643,9 @@
         intercompanyDetalhes.push({
           arquivo: files[i].name,
           hasIntercompany: parsed.hasIntercompany,
-          termos: parsed.termosIntercompany
+          termos: parsed.termosIntercompany,
+          paginas: parsed.interPages,
+          trechos: parsed.interSnippets
         });
       }
 
@@ -625,63 +683,63 @@
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-      let texto = '';
+      let textoCompleto = '';
+      let interPages = [];
+      let interSnippets = [];
+
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        texto += content.items.map(it => it.str).join(' ') + ' ';
+        const pageText = content.items.map(it => it.str).join(' ');
+        textoCompleto += pageText + ' ';
+
+        if (/intercompany|empresas ligadas|partes relacionadas|controladas/i.test(pageText)) {
+          interPages.push(i);
+          const trechosPagina = extrairIntercompanySnippets(pageText);
+          trechosPagina.forEach(t => {
+            if (!interSnippets.includes(t) && interSnippets.length < 4) {
+              interSnippets.push(t);
+            }
+          });
+        }
       }
 
-      const hasIntercompany =
-        /intercompany|empresas ligadas|partes relacionadas|controladas/i.test(texto);
-      const termosIntercompany = [];
-      if (/intercompany/i.test(texto)) termosIntercompany.push('intercompany');
-      if (/empresas ligadas/i.test(texto)) termosIntercompany.push('empresas ligadas');
-      if (/partes relacionadas/i.test(texto)) termosIntercompany.push('partes relacionadas');
-      if (/controladas/i.test(texto)) termosIntercompany.push('controladas');
+      const hasIntercompany = interPages.length > 0;
 
-      const liquidezMatch   = texto.match(/liquidez\s+corrente[^0-9]*([0-9],[0-9])/i);
-      const divEbitdaMatch  = texto.match(/d[ií]vida[^e]*ebitda[^0-9]*([0-9],[0-9])/i);
-      const margemMatch     = texto.match(/margem\s+ebitda[^0-9]*([0-9]{1,2})/i);
+      const liquidezMatch   = textoCompleto.match(/liquidez\s+corrente[^0-9]*([0-9],[0-9])/i);
+      const divEbitdaMatch  = textoCompleto.match(/d[ií]vida[^e]*ebitda[^0-9]*([0-9],[0-9])/i);
+      const margemMatch     = textoCompleto.match(/margem\s+ebitda[^0-9]*([0-9]{1,2})/i);
 
       const liquidez  = liquidezMatch ? parseFloat(liquidezMatch[1].replace(',', '.')) : (1 + Math.random());
       const divEbitda = divEbitdaMatch ? parseFloat(divEbitdaMatch[1].replace(',', '.')) : (2 + Math.random());
       const margem    = margemMatch ? parseFloat(margemMatch[1]) : (8 + Math.random() * 5);
 
-      let cnpj = null;
-      const cnpjMatch = texto.match(/CNPJ[^0-9]*([\d.\-\/]{14,18})/i);
-      if (cnpjMatch) cnpj = cnpjMatch[1];
-
-      let razaoSocial = null;
-      const razaoMatch = texto.match(/Raz[ãa]o\s+Social[:\s\-]*([A-Za-z0-9\s\.,\-&]{3,80})/i);
-      if (razaoMatch) razaoSocial = razaoMatch[1];
-
-      const receita = extrairReceita(texto);
+      const cnpj = extrairCnpjGlobal(textoCompleto);
+      const razaoSocial = extrairRazaoSocialGlobal(textoCompleto);
+      const receita = extrairReceita(textoCompleto);
 
       if (isTomador) {
         atualizarIdentificacao({ cnpj, razaoSocial, receita });
       }
 
-      return { liquidez, divEbitda, margem, hasIntercompany, termosIntercompany, receita, cnpj, razaoSocial };
-    }
+      const termosIntercompany = [];
+      if (/intercompany/i.test(textoCompleto)) termosIntercompany.push('intercompany');
+      if (/empresas ligadas/i.test(textoCompleto)) termosIntercompany.push('empresas ligadas');
+      if (/partes relacionadas/i.test(textoCompleto)) termosIntercompany.push('partes relacionadas');
+      if (/controladas/i.test(textoCompleto)) termosIntercompany.push('controladas');
 
-    function extrairReceita(txt) {
-      const patterns = [
-        /Receita[^\n]{0,60}Bruta[^\d]*([\d\.]+,\d{2})/i,
-        /Receita[^\n]{0,60}Operacional[^\n]{0,20}Bruta[^\d]*([\d\.]+,\d{2})/i,
-        /Receita[^\n]{0,60}L[ií]quida[^\d]*([\d\.]+,\d{2})/i
-      ];
-      const valores = [];
-      const parseValor = (s) => parseFloat(s.replace(/\./g, '').replace(',', '.'));
-
-      for (const p of patterns) {
-        let m;
-        while ((m = p.exec(txt)) !== null) {
-          if (m[1]) valores.push(parseValor(m[1]));
-        }
-      }
-      if (!valores.length) return null;
-      return Math.max(...valores);
+      return {
+        liquidez,
+        divEbitda,
+        margem,
+        hasIntercompany,
+        termosIntercompany,
+        receita,
+        cnpj,
+        razaoSocial,
+        interPages,
+        interSnippets,
+      };
     }
 
     function consolidarResultados(lista) {
@@ -751,7 +809,7 @@
       } else {
         el.textContent =
           `Detectadas possíveis referências a intercompany/partes relacionadas em ${comIntercompany} de ${totalEmpresas} empresa(s). ` +
-          'Recomenda-se revisar notas explicativas das empresas marcadas.';
+          'A tabela abaixo destaca arquivos, páginas e trechos em que esses termos aparecem, sugerindo revisão nas notas explicativas.';
       }
 
       if (!intercompanyDetalhes.length) {
@@ -759,12 +817,19 @@
         return;
       }
 
-      let html = '<table><thead><tr><th>Arquivo</th><th>Intercompany?</th><th>Termos encontrados</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Arquivo</th><th>Intercompany?</th><th>Termos encontrados</th><th>Páginas</th><th>Trechos (exemplos)</th></tr></thead><tbody>';
       intercompanyDetalhes.forEach(item => {
+        const pags = item.paginas && item.paginas.length ? item.paginas.join(', ') : '-';
+        const trechos = item.trechos && item.trechos.length
+          ? item.trechos.map(t => t.length > 120 ? t.slice(0, 117) + '...' : t).join('<br>')
+          : '-';
+
         html += `<tr>
           <td>${item.arquivo}</td>
           <td>${item.hasIntercompany ? '✅' : '❌'}</td>
           <td>${item.termos && item.termos.length ? item.termos.join(', ') : '-'}</td>
+          <td>${pags}</td>
+          <td style="text-align:left;">${trechos}</td>
         </tr>`;
       });
       html += '</tbody></table>';
@@ -779,8 +844,6 @@
       }
 
       let html = '<table><thead><tr><th>Arquivo</th><th>Papel</th><th>CNPJ</th><th>Razão Social (quando disponível)</th></tr></thead><tbody>';
-      const cnpjBase = resultados[0].cnpj || null;
-
       for (let i = 0; i < files.length && i < resultados.length; i++) {
         const r = resultados[i];
         let papel = 'Empresa do Grupo';
@@ -834,6 +897,34 @@
       const porte = document.getElementById('porteTomador').value || '—';
       const faturamento = faturamentoTomadorValor ? formatarMoeda(faturamentoTomadorValor) : '—';
 
+      // Comentários detalhados por indicador
+      const liqComent = tomador.liquidez >= th.liq
+        ? `A liquidez corrente de ${tomador.liquidez.toFixed(2)}x se mantém acima do parâmetro mínimo de ${th.liq.toFixed(2)}x, sugerindo colchão razoável para honrar obrigações de curto prazo.`
+        : `A liquidez corrente de ${tomador.liquidez.toFixed(2)}x está abaixo do parâmetro recomendado de ${th.liq.toFixed(2)}x, indicando maior pressão sobre o capital de giro e necessidade de atenção à gestão de caixa.`;
+
+      const divComent = tomador.divEbitda <= th.div
+        ? `A alavancagem medida por Dívida Líq./EBITDA em ${tomador.divEbitda.toFixed(2)}x encontra-se dentro da faixa de conforto (≤ ${th.div.toFixed(2)}x), o que reduz o risco de estresse financeiro em cenários base.`
+        : `A alavancagem medida por Dívida Líq./EBITDA em ${tomador.divEbitda.toFixed(2)}x supera o parâmetro de referência (≤ ${th.div.toFixed(2)}x), aumentando a sensibilidade do Tomador a oscilações de resultado e fluxo de caixa.`;
+
+      const margComent = tomador.margem >= th.marg
+        ? `A margem EBITDA de ${tomador.margem.toFixed(1)}% supera o piso de ${th.marg.toFixed(1)}%, sinalizando operação com alguma folga operacional para absorver variações de custo e prazo.`
+        : `A margem EBITDA de ${tomador.margem.toFixed(1)}% está abaixo do piso de ${th.marg.toFixed(1)}%, indicando estrutura de resultado mais comprimida e menor capacidade de absorver choques de custo ou atrasos.`;
+
+      const grupoComent = grupoEhMesmoTomador
+        ? 'Como não foi identificado grupo econômico distinto (mesmo CNPJ nos documentos), não há mitigação adicional de risco via consolidação; a análise se concentra exclusivamente na capacidade do próprio Tomador.'
+        : grupoMelhora
+          ? 'Os indicadores consolidados do grupo apresentam liquidez superior e alavancagem mais baixa que a do Tomador, o que sustenta a leitura de que o suporte do grupo econômico atua como mitigador relevante do risco individual da SPE.'
+          : 'Os indicadores do grupo não trazem melhora significativa frente ao Tomador, limitando o efeito de mitigação por consolidação. Nessa configuração, o conforto da seguradora tende a depender mais de garantias adicionais e estruturação da operação.';
+
+      let conclusao;
+      if (score >= 80) {
+        conclusao = 'Classificação de risco baixa para a modalidade considerada, com perfil quantitativo favorável e espaço para estruturar limites próximos ao necessário, desde que mantidos os fundamentos atuais.';
+      } else if (score >= 60) {
+        conclusao = 'Classificação de risco moderada, com fundamentos razoáveis, porém com pontos de atenção em liquidez, alavancagem ou margem. Recomenda-se mitigar via garantias adicionais, covenant financeiro ou estrutura de grupo.';
+      } else {
+        conclusao = 'Classificação de risco elevada, com combinação de liquidez pressionada, alavancagem mais alta e/ou margens comprimidas. Em geral, a concessão de limites relevantes dependerá de mitigadores robustos (coobrigação de holding, colaterais, fiança, etc.).';
+      }
+
       const parecerDiv = document.getElementById('parecerAuto');
       parecerDiv.innerHTML = `
         <h3>Resumo Quantitativo do Tomador</h3>
@@ -850,14 +941,20 @@
           <span class="pill">Modalidade: ${modalidadeInfo}</span>
           <span class="pill">Ano base: ${document.getElementById('anoRef').value}</span>
         </p>
-        <p><strong>Resumo:</strong> ${mitigacao}</p>
+        <p><strong>Resumo sintético:</strong> ${mitigacao}</p>
         <ul>
           <li>Liquidez Corrente do Tomador: ${tomador.liquidez.toFixed(2)} (mínimo ideal: ${th.liq.toFixed(2)})</li>
           <li>Dívida Líquida/EBITDA do Tomador: ${tomador.divEbitda.toFixed(2)} (máximo ideal: ${th.div.toFixed(2)})</li>
           <li>Margem EBITDA do Tomador: ${tomador.margem.toFixed(1)}% (mínimo ideal: ${th.marg.toFixed(1)}%)</li>
-          <li>Indicadores do Grupo: Liquidez ${grupo.liquidez.toFixed(2)}, Dívida/EBITDA ${grupo.divEbitda.toFixed(2)}, Margem ${grupo.margem.toFixed(1)}%</li>
-          <li>Alavancagem relativa (Dívida Líq./EBITDA): Tomador ${tomador.divEbitda.toFixed(2)}x vs Grupo ${grupo.divEbitda.toFixed(2)}x.</li>
+          <li>Indicadores do Grupo: Liquidez ${ultimoGrupo.liquidez.toFixed(2)}, Dívida/EBITDA ${ultimoGrupo.divEbitda.toFixed(2)}, Margem ${ultimoGrupo.margem.toFixed(1)}%</li>
+          <li>Alavancagem relativa (Dívida Líq./EBITDA): Tomador ${tomador.divEbitda.toFixed(2)}x vs Grupo ${ultimoGrupo.divEbitda.toFixed(2)}x.</li>
         </ul>
+        <p><strong>Fundamentos da nota:</strong></p>
+        <p>${liqComent}</p>
+        <p>${divComent}</p>
+        <p>${margComent}</p>
+        <p>${grupoComent}</p>
+        <p><strong>Conclusão de risco:</strong> ${conclusao}</p>
         <p class="hint">
           Parecer gerado de forma automatizada com base em indicadores financeiros. Deve ser complementado com análise qualitativa
           (pipeline de obras, garantias, histórico, rating interno, etc.).
@@ -873,22 +970,32 @@
       const custoSgto = parseFloat(document.getElementById('custoSgto').value || '0');
       const custoSgpe = parseFloat(document.getElementById('custoSgpe').value || '0');
       const custoInfra = parseFloat(document.getElementById('custoInfra').value || '0');
-      const custoPermuta = parseFloat(document.getElementById('custoPermuta').value || '0');
+
+      const vgvPermuta = parseFloat(document.getElementById('vgvPermuta').value || '0');
+      const percPermuta = parseFloat(document.getElementById('percPermuta').value || '0');
+      const valorPermutaFin = parseFloat(document.getElementById('valorPermutaFin').value || '0');
 
       limiteSgto = custoSgto * 0.15;
       limiteSgpe = custoSgpe * 0.02;
       limiteInfra = custoInfra * 1.30;
-      limitePermuta = custoPermuta;
-      limiteTotal = limiteSgto + limiteSgpe + limiteInfra + limitePermuta;
+      limitePermutaFisica = vgvPermuta * (percPermuta / 100);
+      limitePermutaFin = valorPermutaFin;
+
+      limiteTotal = limiteSgto + limiteSgpe + limiteInfra + limitePermutaFisica + limitePermutaFin;
 
       document.getElementById('baseSgto').textContent = formatarMoeda(custoSgto);
       document.getElementById('baseSgpe').textContent = formatarMoeda(custoSgpe);
       document.getElementById('baseInfra').textContent = formatarMoeda(custoInfra);
-      document.getElementById('basePermuta').textContent = formatarMoeda(custoPermuta);
+
+      document.getElementById('basePermutaFisica').textContent = formatarMoeda(vgvPermuta);
+      document.getElementById('fatorPermutaFisica').textContent = percPermuta ? percPermuta.toFixed(2) + '%' : '-';
+      document.getElementById('basePermutaFin').textContent = formatarMoeda(valorPermutaFin);
+
       document.getElementById('limSgto').textContent = formatarMoeda(limiteSgto);
       document.getElementById('limSgpe').textContent = formatarMoeda(limiteSgpe);
       document.getElementById('limInfra').textContent = formatarMoeda(limiteInfra);
-      document.getElementById('limPermuta').textContent = formatarMoeda(limitePermuta);
+      document.getElementById('limPermutaFisica').textContent = formatarMoeda(limitePermutaFisica);
+      document.getElementById('limPermutaFin').textContent = formatarMoeda(limitePermutaFin);
       document.getElementById('limTotal').textContent = formatarMoeda(limiteTotal);
 
       if (ultimoScore != null) {
@@ -899,7 +1006,6 @@
     document.getElementById('custoSgto').addEventListener('input', calcularLimites);
     document.getElementById('custoSgpe').addEventListener('input', calcularLimites);
     document.getElementById('custoInfra').addEventListener('input', calcularLimites);
-    document.getElementById('custoPermuta').addEventListener('input', calcularLimites);
 
     function atualizarCapacidade(score) {
       const box = document.getElementById('capacidadeBox');
@@ -1076,18 +1182,19 @@
 
       const tipo = document.getElementById('tipoPermuta').value;
       const perc = parseFloat(document.getElementById('percPermuta').value || '0');
-      const valor = parseFloat(document.getElementById('valorTerreno').value || '0');
+      const vgv = parseFloat(document.getElementById('vgvPermuta').value || '0');
+      const valorFin = parseFloat(document.getElementById('valorPermutaFin').value || '0');
       const div = document.getElementById('permutaAlerta');
 
       let alertas = [];
 
       if (perc > 30) {
-        alertas.push('Permuta acima de 30% do VGV indica maior exposição de liquidez. Recomendável considerar seguro de entrega / performance.');
+        alertas.push('Permuta física acima de 30% do VGV indica maior exposição de liquidez. Recomendável considerar seguro de entrega / performance.');
       }
-      if (valor > 0 && perc === 0) {
-        alertas.push('Valor de terreno informado sem percentual de VGV. Ajustar a modelagem para avaliar exposição relativa.');
+      if (vgv > 0 && perc === 0) {
+        alertas.push('VGV informado sem percentual de permuta. Ajustar a modelagem para avaliar a exposição relativa do terreno.');
       }
-      if (tipo === 'financeira') {
+      if (valorFin > 0 && tipo !== 'fisica') {
         alertas.push('Permuta financeira demanda atenção à capacidade de pagamento ao longo do cronograma de obra.');
       }
       if (!alertas.length) {
@@ -1097,11 +1204,14 @@
           alertas.map(a => `<li>${a}</li>`).join('') +
           '</ul>';
       }
+
+      calcularLimites();
     }
 
     document.getElementById('tipoPermuta').addEventListener('change', atualizarPermutaAlerta);
+    document.getElementById('vgvPermuta').addEventListener('input', atualizarPermutaAlerta);
     document.getElementById('percPermuta').addEventListener('input', atualizarPermutaAlerta);
-    document.getElementById('valorTerreno').addEventListener('input', atualizarPermutaAlerta);
+    document.getElementById('valorPermutaFin').addEventListener('input', atualizarPermutaAlerta);
 
     // Checklist Caixa
     function atualizarChecklist() {
